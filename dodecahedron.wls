@@ -30,7 +30,13 @@ allSchlaefliSymbols = <|
 	"SmallStellatedDodecahedron" -> "52_5"
 |>;
 
-colors = Join[{Red, Blue, Green, Yellow, Magenta, Cyan, Brown, Orange, Pink, Purple}, RandomColor[100]];
+colors = Join[
+	{
+		Red,  Orange, Blue, Green, Pink, 
+		Brown, Gray, Cyan, Darker[Green, 0.5], Purple,
+		Yellow, White
+	},
+	RandomColor[100]];
 
 getFaceCenter[face_] := Simplify[Total[PolygonCoordinates[face]]/5];
 getEdgesFromFace[face_] := Table[{face[[i+1]], face[[Mod[i+1, Length[face]] + 1]]}, {i, 0, Length[face] - 1}];
@@ -146,6 +152,7 @@ exportPolyhedron[shape_] := Module[
 
 	viewCenter = {0, 0, 0};
 	faceCenters = Table[ Mean[faceCoordinates[[k]] ], {k, 1, Length[faceCoordinates]}];
+	(* Map[Print[{#, faceCenters[[#]]//N}]&, Range[Length[faceCenters]]]; *)
 
 	elements = {};
 
