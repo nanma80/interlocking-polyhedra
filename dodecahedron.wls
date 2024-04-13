@@ -2,8 +2,11 @@
 
 exportToPov = True;
 specialViewPoint = False;
+displayLevel = 5;
+
 imageSize = 720 / 3 * {4, 3};
-epsilon = 0.000000000001;
+epsilon = 0.00000001;
+ApproxSamePoint[point1_, point2_] := Round[point1, epsilon] == Round[point2, epsilon];
 
 Needs["POVRayRender`"];
 ConfigurePOVRayRender["POVRayPath" -> "C:\\Program Files\\POV-Ray\\v3.7\\bin\\pvengine64.exe"];
@@ -36,19 +39,6 @@ getEdgesFromFace[face_] := Table[{face[[i+1]], face[[Mod[i+1, Length[face]] + 1]
 	functions from:
 	https://mathematica.stackexchange.com/questions/45265/distance-between-two-line-segments-in-3-space
  *)
-pointsegdis[{seg_, pointlist_}] := 
-       Module[{u = Subtract @@ seg, mean = Plus @@ seg/2},
-       {#, (mean - u  Sign@# Min[1, Abs@#]/2) &@(-(2 ( # - mean).u )/u.u) } & 
-        /@ pointlist ]
-segsegdis[s1_, s2_] := Module[{u, v, w, d, t1, t2},
-   {u, v, w} = Subtract @@ # & /@ {Sequence @@ #, First /@ #} &@{s1, s2};
-   If[(d = u.u v.v - (v.u)^2) != 0 &&
-       Abs[t2 = 2 (u.u v.w - u.w v.u)/d + 1] <= 1 &&
-       Abs[t1 = 2 (v.u v.w - v.v u.w)/d + 1] <= 1,
-    Plus @@ (#[[1]] (1 + {1, -1} #[[2]] )) /2 & /@ {{s1, t1}, {s2, t2}} ,
-    First@SortBy[Flatten[pointsegdis /@ {{s1, s2}, {s2, s1}}, 1], 
-                       Total@((Subtract @@ #)^2) &]
-       ] ] ;
 
 distSegToSeg[s1_, s2_] :=
   Module[{small = 10^(-8), p1, p2, q1, a2, u, v, w,
@@ -96,8 +86,6 @@ distSegToSeg[s1_, s2_] :=
     N[Norm[w + sc*u - tc*v]]
 ];
 
-segDistance[s1_, s2_] := Apply[EuclideanDistance, segsegdis[s1, s2]];
-
 findMinDistance[edges_, faceCenters_, shiftFactor_, rotationAngleFactor_ ] := Module[
 	{ rotationAngle, minDistance, copy, copyCenter, copyEdges, copyVertices, copy1Edges, copy1Vertices, copyId, coreEdgeId, copyEdgeId },
 	
@@ -123,9 +111,6 @@ findMinDistance[edges_, faceCenters_, shiftFactor_, rotationAngleFactor_ ] := Mo
 			For[coreEdgeId = 1, coreEdgeId <= Length[copy1Edges], coreEdgeId++,
 				For[copyEdgeId = 1, copyEdgeId <= Length[copyEdges], copyEdgeId++,
 					distance = distSegToSeg[ copy1Edges[[coreEdgeId]], copyEdges[[copyEdgeId]] ];
-					(* distance = segDistance[ copy1Edges[[coreEdgeId]], copyEdges[[copyEdgeId]] ]; *)
-					
-					(* minDistance = Min[distance, minDistance]; *)
 					If[distance < minDistance, minDistance = distance];
 					If[minDistance < epsilon,
 						Return[0];
@@ -141,7 +126,7 @@ findMinDistance[edges_, faceCenters_, shiftFactor_, rotationAngleFactor_ ] := Mo
 exportPolyhedron[shape_] := Module[
 	{outputFileName, vertices, edges, faces, thickness, lighting, graph},
 
-	outputFileName = shape <> ".png";
+	outputFileName = shape <> "_level_" <> ToString[displayLevel] <> ".png";
 	imageFolder = "output";
 	outputFolder = FileNameJoin[{imageFolder, shape}];
 	If[!DirectoryQ[outputFolder], CreateDirectory[outputFolder]];
@@ -178,22 +163,9 @@ exportPolyhedron[shape_] := Module[
 
 	range = range * (1 + shiftFactor) / 1.3;
 
-	(* minDistance = findMinDistance[edges, faceCenters, 0.5, 0.1]; *)
 	minDistance = findMinDistance[edges, faceCenters, shiftFactor, rotationAngleFactor];
 	Print["minDistance, shiftFactor, rotationAngleFactor"];
 	Print[{minDistance, shiftFactor, rotationAngleFactor}];
-
-	(* maxMinDistance = 0;	
-	For[shiftFactor = 1.0, shiftFactor < 1.1, shiftFactor += 0.01,
-		For[angleFactor = 0.0, angleFactor < 0.5, angleFactor += 0.01,
-			minDistance = findMinDistance[edges, faceCenters, shiftFactor, angleFactor];
-			If[minDistance > maxMinDistance,
-				maxMinDistance = minDistance;
-				Print["updating maxMinDistance to:"];
-				Print[{ maxMinDistance, shiftFactor, angleFactor } ];
-			];
-		];
-	]; *)
 
 (* 
 	candidates
@@ -211,8 +183,6 @@ exportPolyhedron[shape_] := Module[
 
 	(* maxMinDistance = FindMaximum[ findMinDistance[edges, faceCenters, 0.5, angleFactor], {angleFactor, 0.05} ]; *)
 
-	(* Print[maxMinDistance]; *)
-
 	For[copyId = 1, copyId <= Length[faceCenters] && copyId <= 12, copyId++,
 		copy = <||>;
 		copyCenter = faceCenters[[copyId]] * shiftFactor;
@@ -223,26 +193,26 @@ exportPolyhedron[shape_] := Module[
 		copyEdges = Map[ (# + copyCenter).rotationMatrix &, edges, {2} ];
 		copyVertices = Map[ (# + copyCenter).rotationMatrix &, vertices];
 		copyFaces = Map[ (# + copyCenter).rotationMatrix &, faceCoordinates, {2} ];
-
-		If[copyId == 1,
-			copy1Edges = copyEdges;
-			copy1Vertices = copyVertices;
-		];
+		copyEdgeCenters = Map[Mean, copyEdges];
+		copyEdgeCenterLevels = Map[Round[Norm[#], epsilon]&, copyEdgeCenters];
+		levels = copyEdgeCenterLevels//Union//Sort;
+		displayEdges = Select[copyEdges, Norm[Mean[#]] < levels[[displayLevel]] + 10 epsilon & ];
+		displayVertices = Union[Flatten[displayEdges, 1], SameTest -> ApproxSamePoint];
 
 		color = colors[[copyId]];
 
 		opacity = 1.0;
 		(* opacity = 0.7; *)
 
-		AppendTo[ elements, { FaceForm[color], Map[Cylinder[#, thickness]&, copyEdges] } ];
-		AppendTo[ elements, { FaceForm[color], Map[Sphere[#, thickness]&, copyVertices] } ];
+		AppendTo[ elements, { FaceForm[color], Map[Cylinder[#, thickness]&, displayEdges] } ];
+		AppendTo[ elements, { FaceForm[color], Map[Sphere[#, thickness]&, displayVertices] } ];
 		(* AppendTo[ elements, { FaceForm[color], Opacity[opacity], Map[Polygon[#]&, copyFaces] } ]; *)
 	];
 
 	graph = Graphics3D[
 		elements,
 		ViewPoint -> viewPoint,
-		PlotRange -> {{viewCenter[[1]]-range, viewCenter[[1]]+range}, {viewCenter[[2]]-range, viewCenter[[2]]+range}, {viewCenter[[3]]-range, viewCenter[[3]]+range}},
+		(* PlotRange -> {{viewCenter[[1]]-range, viewCenter[[1]]+range}, {viewCenter[[2]]-range, viewCenter[[2]]+range}, {viewCenter[[3]]-range, viewCenter[[3]]+range}}, *)
 		Lighting -> lighting
 	];
 
