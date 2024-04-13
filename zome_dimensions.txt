@@ -1,0 +1,40 @@
+blue struts:
+
+vZome: 7.49cm, 4.63cm
+7.49-4.63=2.86
+
+
+zome website:
+https://www.zometool.com/parts-chart/
+
+ball diameter: 1.77cm
+blue struts between balls: 2.86cm, 5.72cm
+
+5.72 - 2.86 = 2.86cm
+
+5.72 = 7.49-1.77
+2.86 = 4.63-1.77
+
+blue strut width?
+image 1:
+82, 359 -> 186, 377
+
+104 : 18=5.7778
+
+2.86/x =104/18
+x =18/104*2.86=0.495cm ~ 0.5cm
+
+
+image 2:
+142, 69 -> 448, 127
+448-142=306
+127-69=58
+306/58=5.27
+2.86*58/306=0.54cm?
+
+These two estimates are off by a lot. Need to measure a real strut.
+
+The blue struts that I got a long time ago was 2.86 cm long, and the ball center to ball center distance is 4.63.
+
+Since the diameter / edge length is 0.089, we need length > 5.6. So need ball center to ball center = 7.49cm. 
+Strut length between balls 7.49-1.77=5.72
