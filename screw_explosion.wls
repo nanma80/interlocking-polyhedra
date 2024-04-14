@@ -2,33 +2,34 @@
 
 exportToPov = True;
 specialViewPoint = False;
-displayLevel = 5;
+displayLevel = 7;
+(* searchingForOptimalFactors = True; *)
+searchingForOptimalFactors = False;
 
 imageSize = 720 / 3 * {4, 3};
 epsilon = 0.00000001;
 ApproxSamePoint[point1_, point2_] := Round[point1, epsilon] == Round[point2, epsilon];
 
+optimalShiftFactor = <|
+	"Dodecahedron" -> 1.04,
+	"Cube" -> 1.42,
+	"Octahedron" -> 1.14,
+	"Tetrahedron" -> 0.76,
+	"Icosahedron" -> 2.53
+	(* "Icosahedron" -> 0.78 *)
+|>;
+
+optimalRotationAngleFactor = <|
+	"Dodecahedron" -> 0.27,
+	"Cube" -> 0.23,
+	"Octahedron" -> 0.21,
+	"Tetrahedron" -> 0.21,
+	"Icosahedron" -> 0.20
+	(* "Icosahedron" -> 0.21 *)
+|>;
+
 Needs["POVRayRender`"];
 ConfigurePOVRayRender["POVRayPath" -> "C:\\Program Files\\POV-Ray\\v3.7\\bin\\pvengine64.exe"];
-
-allColors = <|
-	"3_3" -> Cyan,
-	"5_3" -> Red,
-	"3_5" -> Green,
-	"52_5" -> Blue,
-	"5_52" -> Yellow,
-	"52_3" -> Magenta,
-	"3_52" -> Orange
-|>;
-
-allSchlaefliSymbols = <|
-	"Icosahedron" -> "3_5",
-	"Dodecahedron" -> "5_3",
-	"GreatDodecahedron" -> "5_52",
-	"GreatIcosahedron" -> "3_52", 
-	"GreatStellatedDodecahedron" -> "52_3", 
-	"SmallStellatedDodecahedron" -> "52_5"
-|>;
 
 colors = Join[
 	{
@@ -38,7 +39,6 @@ colors = Join[
 	},
 	RandomColor[100]];
 
-getFaceCenter[face_] := Simplify[Total[PolygonCoordinates[face]]/5];
 getEdgesFromFace[face_] := Table[{face[[i+1]], face[[Mod[i+1, Length[face]] + 1]]}, {i, 0, Length[face] - 1}];
 
 (* 
@@ -92,10 +92,11 @@ distSegToSeg[s1_, s2_] :=
     N[Norm[w + sc*u - tc*v]]
 ];
 
-findMinDistance[edges_, faceCenters_, shiftFactor_, rotationAngleFactor_ ] := Module[
+findMinDistance[edges_, faceCenters_, findMinDistance_, shiftFactor_, rotationAngleFactor_ ] := Module[
 	{ rotationAngle, minDistance, copy, copyCenter, copyEdges, copyVertices, copy1Edges, copy1Vertices, copyId, coreEdgeId, copyEdgeId },
 	
-	rotationAngle = 2 Pi / 5 * rotationAngleFactor;
+	sideCountInFace = Length[faceCoordinates[[1]]];
+	rotationAngle = 2 Pi / sideCountInFace * rotationAngleFactor;
 
 	minDistance = 10.0;
 
@@ -144,11 +145,12 @@ exportPolyhedron[shape_] := Module[
 	edges = PolyhedronData[shape, "EdgeCoordinates"]//N;
 	faces = PolyhedronData[shape, "Polygons"];
 	faceCoordinates = Map[#[[1]]&, faces];
-	thickness = 0.089/2;
+	
 	lighting = {{"Point", White, {50, -50, 50}}};
 	range = 1.0 * Norm[vertices[[1]]];
 	color = allColors[ allSchlaefliSymbols[shape]];
 	viewPoint = {0, 0, 10};
+	viewPoint = {50, -50, 50};
 
 	viewCenter = {0, 0, 0};
 	faceCenters = Table[ Mean[faceCoordinates[[k]] ], {k, 1, Length[faceCoordinates]}];
@@ -161,40 +163,63 @@ exportPolyhedron[shape_] := Module[
 	core["vertices"] = vertices;
 
 	copies = {};
-	
-	(* shiftFactor = 0.34;
-	rotationAngleFactor = 0.17; *)
 
-	shiftFactor = 1.04;
-	rotationAngleFactor = 0.27;
+	shiftFactor = optimalShiftFactor[shape];
+	rotationAngleFactor = optimalRotationAngleFactor[shape];
 
 	range = range * (1 + shiftFactor) / 1.3;
 
-	minDistance = findMinDistance[edges, faceCenters, shiftFactor, rotationAngleFactor];
+	minDistance = findMinDistance[edges, faceCenters, faceCoordinates, shiftFactor, rotationAngleFactor];
 	Print["minDistance, shiftFactor, rotationAngleFactor"];
 	Print[{minDistance, shiftFactor, rotationAngleFactor}];
 
+	thickness = minDistance/2;
+
+	If[searchingForOptimalFactors,
+		maxMinDistance = 0;	
+		For[shiftFactor = 2.45, shiftFactor < 2.9, shiftFactor += 0.01,
+			For[angleFactor = 0.1, angleFactor <= 0.3, angleFactor += 0.01,
+				minDistance = findMinDistance[edges, faceCenters, faceCoordinates, shiftFactor, angleFactor];
+				If[minDistance > maxMinDistance,
+					maxMinDistance = minDistance;
+					Print["updating maxMinDistance to:"];
+					Print[{ maxMinDistance, shiftFactor, angleFactor } ];
+				];
+			];
+		];
+		Exit[];
+	];
+
 (* 
-	candidates
-	{0.06340204890759395, 0.34, 0.17000000000000004}
-	{0.06002275290971208, 0.81, 0.29000000000000004}
-	{0.06669808021639463, 0.9500000000000002, 0.28}
-	{0.07290163789019177, 0.9600000000000002, 0.29000000000000004}
+	dodecahedron
 	{0.08908130915292858, 1.04, 0.27}
 
-	looks similar to original:
-	0.04, 0.8, 0.3
+	cube
+	{0.13997235190833174, 1.4200000000000002, 0.23000000000000007}
+
+	octahedron
+	{0.0840834722251952, 1.1400000000000001, 0.21000000000000008}
+
+	tetrahedron
+	{0.08361351956627538, 0.76, 0.21000000000000008}
+
+	icosahedron: questionable. too loose
+	{0.12892581145636603, 2.5299999999999985, 0.20000000000000007}
+	local optimum:
+	{0.026120905956610308, 0.78, 0.21000000000000008}
+
  *)
 
 	(* Exit[]; *)
 
-	(* maxMinDistance = FindMaximum[ findMinDistance[edges, faceCenters, 0.5, angleFactor], {angleFactor, 0.05} ]; *)
+	(* maxMinDistance = FindMaximum[ findMinDistance[edges, faceCenters, findMinDistance, 0.5, angleFactor], {angleFactor, 0.05} ]; *)
 
-	For[copyId = 1, copyId <= Length[faceCenters] && copyId <= 12, copyId++,
+	For[copyId = 1, copyId <= Length[faceCenters], copyId++,
 		copy = <||>;
 		copyCenter = faceCenters[[copyId]] * shiftFactor;
 
-		rotationAngle = 2 Pi / 5 * rotationAngleFactor;
+		sideCountInFace = Length[faceCoordinates[[1]]];
+		rotationAngle = 2 Pi / sideCountInFace * rotationAngleFactor;
 		rotationMatrix = RotationMatrix[rotationAngle, copyCenter];
 
 		copyEdges = Map[ (# + copyCenter).rotationMatrix &, edges, {2} ];
@@ -203,6 +228,10 @@ exportPolyhedron[shape_] := Module[
 		copyEdgeCenters = Map[Mean, copyEdges];
 		copyEdgeCenterLevels = Map[Round[Norm[#], epsilon]&, copyEdgeCenters];
 		levels = copyEdgeCenterLevels//Union//Sort;
+		If[displayLevel > Length[levels],
+			Print["Warning: there are only " <> ToString[Length[levels]] <> " levels. Display level is reset from " <> ToString[displayLevel] <> " to the length of levels"];
+			displayLevel = Length[levels];
+		];
 		displayEdges = Select[copyEdges, Norm[Mean[#]] < levels[[displayLevel]] + 10 epsilon & ];
 		displayVertices = Union[Flatten[displayEdges, 1], SameTest -> ApproxSamePoint];
 
@@ -234,7 +263,11 @@ exportPolyhedron[shape_] := Module[
 ];
 
 shapes = {
-	"Dodecahedron"
+	(* "Dodecahedron" *)
+	(* "Cube" *)
+	(* "Octahedron" *)
+	(* "Tetrahedron" *)
+	"Icosahedron"
 };
 
 Map[exportPolyhedron, shapes];
