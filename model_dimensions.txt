@@ -1,3 +1,16 @@
+Model using straws
+
+measured perimeter = 20mm
+diameter = 6.366 mm
+edge length, from vertex to vertex = 20/pi/0.089 = 71.53mm
+
+length of straw: 210mm. 1/3: 70mm
+Assume the straw will not cover the whole length, should be fine.
+
+
+====
+Zome:
+
 blue struts:
 
 vZome: 7.49cm, 4.63cm

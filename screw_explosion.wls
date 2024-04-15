@@ -2,7 +2,7 @@
 
 exportToPov = True;
 specialViewPoint = False;
-displayLevel = 7;
+displayLevel = 5;
 (* searchingForOptimalFactors = True; *)
 searchingForOptimalFactors = False;
 
@@ -119,6 +119,35 @@ findMinDistance[edges_, faceCenters_, findMinDistance_, shiftFactor_, rotationAn
 				For[copyEdgeId = 1, copyEdgeId <= Length[copyEdges], copyEdgeId++,
 					distance = distSegToSeg[ copy1Edges[[coreEdgeId]], copyEdges[[copyEdgeId]] ];
 					If[distance < minDistance, minDistance = distance];
+					(* If[distance < minDistance * 1.03, Print[{distance, copyId, coreEdgeId, copyEdgeId}]]; *)
+(* 
+for Dodecahedron, here are the closest edges
+{distance, copyId, coreEdgeId, copyEdgeId}
+
+min distance: two level 1 rings next to each other
+{0.08908130915292858, 2, 4, 21}
+{0.08908130915292843, 2, 4, 24}
+{0.08908130915292863, 2, 5, 2}
+{0.08908130915292853, 2, 5, 24}
+{0.0890813091529287, 2, 13, 21}
+{0.08908130915292871, 2, 13, 22}
+{0.08908130915292858, 2, 15, 1}
+{0.08908130915292858, 2, 15, 2}
+{0.08908130915292863, 2, 26, 1}
+{0.08908130915292868, 2, 26, 22}
+
+2.8% more than min distance:
+{0.09159796790204641, 3, 4, 25}
+{0.09159796790204669, 3, 26, 11}
+{0.09159796790204655, 4, 13, 23}
+{0.09159796790204658, 4, 15, 25}
+{0.09159796790204656, 5, 5, 23}
+{0.09159796790204645, 5, 26, 8}
+{0.09159796790204627, 6, 4, 8}
+{0.09159796790204658, 6, 15, 3}
+{0.09159796790204691, 7, 5, 11}
+{0.09159796790204645, 7, 13, 3}
+ *)
 					If[minDistance < epsilon,
 						Return[0];
 					];
@@ -126,14 +155,13 @@ findMinDistance[edges_, faceCenters_, findMinDistance_, shiftFactor_, rotationAn
 			];
 		];
 	];
-
 	Return[minDistance];
 ];
 
 exportPolyhedron[shape_] := Module[
 	{outputFileName, vertices, edges, faces, thickness, lighting, graph},
 
-	outputFileName = shape <> "_level_" <> ToString[displayLevel] <> ".png";
+	outputFileName = "test_" <> shape <> "_level_" <> ToString[displayLevel] <> ".png";
 	imageFolder = "output";
 	outputFolder = FileNameJoin[{imageFolder, shape}];
 	If[!DirectoryQ[outputFolder], CreateDirectory[outputFolder]];
@@ -149,8 +177,8 @@ exportPolyhedron[shape_] := Module[
 	lighting = {{"Point", White, {50, -50, 50}}};
 	range = 1.0 * Norm[vertices[[1]]];
 	color = allColors[ allSchlaefliSymbols[shape]];
-	viewPoint = {0, 0, 10};
-	viewPoint = {50, -50, 50};
+	
+	viewPoint = If[shape == "Dodecahedron", {0, 0, 10}, {50, -50, 50}];
 
 	viewCenter = {0, 0, 0};
 	faceCenters = Table[ Mean[faceCoordinates[[k]] ], {k, 1, Length[faceCoordinates]}];
@@ -233,6 +261,42 @@ exportPolyhedron[shape_] := Module[
 			displayLevel = Length[levels];
 		];
 		displayEdges = Select[copyEdges, Norm[Mean[#]] < levels[[displayLevel]] + 10 epsilon & ];
+
+		(* plot edges with min distance *)
+(* 		If[copyId == 1,
+			displayEdges = displayEdges[[ {4, 5, 13, 15, 26} ]];
+		];
+
+		If[copyId == 2,
+			displayEdges = displayEdges[[ {1, 2, 21, 22, 24 } ]];
+		];
+ *)
+
+(* 		If[copyId == 3,
+			displayEdges = displayEdges[[ {11, 25 } ]];
+		];
+
+		If[copyId == 4,
+			displayEdges = displayEdges[[ {23, 25 } ]];
+		];
+
+		If[copyId == 5,
+			displayEdges = displayEdges[[ {8, 23 } ]];
+		];
+
+		If[copyId == 6,
+			displayEdges = displayEdges[[ {3, 8} ]];
+		];
+
+		If[copyId == 7,
+			displayEdges = displayEdges[[ {3, 11 } ]];
+		];
+ *)
+		(* If[copyId > 7 || copyId == 2, *)
+(* 		If[copyId > 2,
+			displayEdges = {};
+		];
+ *)
 		displayVertices = Union[Flatten[displayEdges, 1], SameTest -> ApproxSamePoint];
 
 		color = colors[[copyId]];
@@ -263,11 +327,11 @@ exportPolyhedron[shape_] := Module[
 ];
 
 shapes = {
-	(* "Dodecahedron" *)
+	"Dodecahedron"
 	(* "Cube" *)
 	(* "Octahedron" *)
 	(* "Tetrahedron" *)
-	"Icosahedron"
+	(* "Icosahedron" *)
 };
 
 Map[exportPolyhedron, shapes];
