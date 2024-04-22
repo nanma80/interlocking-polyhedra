@@ -1,0 +1,29 @@
+12 dodecahedra
+
+Each dodecahedron:
+- 30 edges. Each is 1/3 of a straw (21cm). Each edge: 7cm. 10 straws per dodecahedron.
+- Has 20 vertices. 
+  - If we use pipe cleaners. Each 1 pipe cleaner per vertex. 240 pipe cleaners in total
+  - If we use paper clips. 3 clips per vertex. 60 clips per dodec
+
+Whole shape:
+- 120 straws in total. Each cut into 3: 360 segments. Let's use 6 colors. 20 straws per color.
+- 720 clips in total
+
+Size of paper clips. Either works
+- smaller: length 24mm 0.94 inch, width 6mm
+- larger: length 31mm 1.22 inch, width 7mm
+
+We bought 500 straws in 8 colors. Each color: 60 straws.
+Colors: green, blue, pink, orange, purple, white, yellow, light purple.
+
+Let's not use white and light purple.
+keep
+green, blue, pink, orange, purple, yellow,
+
+We bought 1000 paper clips. Enough
+
+Level 1: two rings per color. 10 edges per color. 4 straws per color. 6 colors.
+
+Level 2:
+
