@@ -2,7 +2,7 @@
 
 exportToPov = True;
 specialViewPoint = False;
-displayLevel = 5;
+displayLevel = 2;
 (* searchingForOptimalFactors = True; *)
 searchingForOptimalFactors = False;
 
@@ -12,17 +12,17 @@ ApproxSamePoint[point1_, point2_] := Round[point1, epsilon] == Round[point2, eps
 
 optimalShiftFactor = <|
 	"Dodecahedron" -> 2.14,
-	"Cube" -> 1.42,
-	"Octahedron" -> 1.14,
-	"Tetrahedron" -> 0.76,
+	"Cube" -> 0.33,
+	"Octahedron" -> 0.29,
+	"Tetrahedron" -> 0.31,
 	"Icosahedron" -> 1.19
 	(* "Icosahedron" -> 0.78 *)
 |>;
 
 optimalRotationAngleFactor = <|
 	"Dodecahedron" -> 0.18,
-	"Cube" -> 0.23,
-	"Octahedron" -> 0.21,
+	"Cube" -> 0.17,
+	"Octahedron" -> 0.18,
 	"Tetrahedron" -> 0.21,
 	"Icosahedron" -> 0.29
 	(* "Icosahedron" -> 0.21 *)
@@ -151,7 +151,7 @@ exportPolyhedron[shape_] := Module[
 	range = 1.0 * Norm[vertices[[1]]];
 	color = allColors[ allSchlaefliSymbols[shape]];
 	
-	viewPoint = If[shape == "Dodecahedron", {0, 0, 10}, {50, -50, 50}];
+	viewPoint = If[shape == "Dodecahedron", {0, 0, 10}, {50, -20, 30}];
 
 	viewCenter = {0, 0, 0};
 	(* explosionVectors = Table[ Mean[faceCoordinates[[k]] ], {k, 1, Length[faceCoordinates]}]; *)
@@ -179,10 +179,10 @@ exportPolyhedron[shape_] := Module[
 
 	If[searchingForOptimalFactors,
 		maxMinDistance = 0;	
-		For[shiftFactor = 1.1, shiftFactor < 1.3, shiftFactor += 0.01,
+		For[shiftFactor = 0.2, shiftFactor < 0.4, shiftFactor += 0.01,
 			Print["shiftFactor:"];
 			Print[shiftFactor];
-			For[angleFactor = 0.2, angleFactor <= 0.4, angleFactor += 0.01,
+			For[angleFactor = 0.0, angleFactor <= 0.5, angleFactor += 0.01,
 				minDistance = findMinDistance[edges, explosionVectors, faceCoordinates, shiftFactor, angleFactor];
 				If[minDistance > maxMinDistance,
 					maxMinDistance = minDistance;
@@ -199,10 +199,13 @@ exportPolyhedron[shape_] := Module[
 	{0.4644790843781216, 2.139999999999998, 0.18000000000000002}
 
 	cube
+	{0.08781383982639773, 0.33000000000000007, 0.17000000000000004}
 
 	octahedron
+	{0.0468156128801163, 0.29000000000000004, 0.18000000000000005}
 
 	tetrahedron
+	{0.1351475851690155, 0.3100000000000001, 0.21000000000000005}
 
 	icosahedron:
 	{0.07023868828041116, 1.1900000000000002, 0.2900000000000001}
@@ -299,8 +302,8 @@ shapes = {
 	(* "Dodecahedron" *)
 	(* "Cube" *)
 	(* "Octahedron" *)
-	(* "Tetrahedron" *)
-	"Icosahedron"
+	"Tetrahedron"
+	(* "Icosahedron" *)
 };
 
 Map[exportPolyhedron, shapes];
