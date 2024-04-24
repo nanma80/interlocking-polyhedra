@@ -2,7 +2,7 @@
 
 exportToPov = True;
 specialViewPoint = False;
-displayLevel = 5;
+displayLevel = 1;
 (* searchingForOptimalFactors = True; *)
 searchingForOptimalFactors = False;
 
@@ -15,7 +15,7 @@ optimalShiftFactor = <|
 	"Cube" -> 1.42,
 	"Octahedron" -> 1.14,
 	"Tetrahedron" -> 0.76,
-	"Icosahedron" -> 2.53
+	"Icosahedron" -> 2.51
 	(* "Icosahedron" -> 0.78 *)
 |>;
 
@@ -24,7 +24,7 @@ optimalRotationAngleFactor = <|
 	"Cube" -> 0.23,
 	"Octahedron" -> 0.21,
 	"Tetrahedron" -> 0.21,
-	"Icosahedron" -> 0.20
+	"Icosahedron" -> 0.39
 	(* "Icosahedron" -> 0.21 *)
 |>;
 
@@ -93,7 +93,7 @@ distSegToSeg[s1_, s2_] :=
 ];
 
 findMinDistance[edges_, faceCenters_, findMinDistance_, shiftFactor_, rotationAngleFactor_ ] := Module[
-	{ rotationAngle, minDistance, copy, copyCenter, copyEdges, copyVertices, copy1Edges, copy1Vertices, copyId, coreEdgeId, copyEdgeId },
+	{ rotationAngle, minDistance, copy, copyCenter, copyEdges, copyVertices, copy1Edges, copy1Vertices, copyId, copy1EdgeId, copyEdgeId },
 	
 	sideCountInFace = Length[faceCoordinates[[1]]];
 	rotationAngle = 2 Pi / sideCountInFace * rotationAngleFactor;
@@ -115,14 +115,14 @@ findMinDistance[edges_, faceCenters_, findMinDistance_, shiftFactor_, rotationAn
 		];
 
 		If[copyId >= 2,
-			For[coreEdgeId = 1, coreEdgeId <= Length[copy1Edges], coreEdgeId++,
+			For[copy1EdgeId = 1, copy1EdgeId <= Length[copy1Edges], copy1EdgeId++,
 				For[copyEdgeId = 1, copyEdgeId <= Length[copyEdges], copyEdgeId++,
-					distance = distSegToSeg[ copy1Edges[[coreEdgeId]], copyEdges[[copyEdgeId]] ];
+					distance = distSegToSeg[ copy1Edges[[copy1EdgeId]], copyEdges[[copyEdgeId]] ];
 					If[distance < minDistance, minDistance = distance];
-					(* If[distance < minDistance * 1.03, Print[{distance, copyId, coreEdgeId, copyEdgeId}]]; *)
+					(* If[distance < minDistance * 1.03, Print[{distance, copyId, copy1EdgeId, copyEdgeId}]]; *)
 (* 
 for Dodecahedron, here are the closest edges
-{distance, copyId, coreEdgeId, copyEdgeId}
+{distance, copyId, copy1EdgeId, copyEdgeId}
 
 min distance: two level 1 rings next to each other
 {0.08908130915292858, 2, 4, 21}
@@ -161,7 +161,7 @@ min distance: two level 1 rings next to each other
 exportPolyhedron[shape_] := Module[
 	{outputFileName, vertices, edges, faces, thickness, lighting, graph},
 
-	outputFileName = "test_" <> shape <> "_level_" <> ToString[displayLevel] <> ".png";
+	outputFileName = shape <> "_level_" <> ToString[displayLevel] <> ".png";
 	imageFolder = "output";
 	outputFolder = FileNameJoin[{imageFolder, shape}];
 	If[!DirectoryQ[outputFolder], CreateDirectory[outputFolder]];
@@ -205,8 +205,8 @@ exportPolyhedron[shape_] := Module[
 
 	If[searchingForOptimalFactors,
 		maxMinDistance = 0;	
-		For[shiftFactor = 2.45, shiftFactor < 2.9, shiftFactor += 0.01,
-			For[angleFactor = 0.1, angleFactor <= 0.3, angleFactor += 0.01,
+		For[shiftFactor = 2.5, shiftFactor < 2.9, shiftFactor += 0.01,
+			For[angleFactor = 0.10, angleFactor <= 0.50, angleFactor += 0.01,
 				minDistance = findMinDistance[edges, faceCenters, faceCoordinates, shiftFactor, angleFactor];
 				If[minDistance > maxMinDistance,
 					maxMinDistance = minDistance;
@@ -232,9 +232,7 @@ exportPolyhedron[shape_] := Module[
 	{0.08361351956627538, 0.76, 0.21000000000000008}
 
 	icosahedron: questionable. too loose
-	{0.12892581145636603, 2.5299999999999985, 0.20000000000000007}
-	local optimum:
-	{0.026120905956610308, 0.78, 0.21000000000000008}
+	{0.13086140887215503, 2.51, 0.39000000000000024}
 
  *)
 
@@ -327,11 +325,11 @@ exportPolyhedron[shape_] := Module[
 ];
 
 shapes = {
-	"Dodecahedron"
+	(* "Dodecahedron" *)
 	(* "Cube" *)
 	(* "Octahedron" *)
 	(* "Tetrahedron" *)
-	(* "Icosahedron" *)
+	"Icosahedron"
 };
 
 Map[exportPolyhedron, shapes];
