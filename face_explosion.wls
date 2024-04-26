@@ -5,10 +5,22 @@ specialViewPoint = False;
 displayLevel = 1;
 (* searchingForOptimalFactors = True; *)
 searchingForOptimalFactors = False;
+halfCopies = True;
+(* halfCopies = False; *)
+
+(* edgeLevelUsedByMinDistance = 100; *)
 
 imageSize = 720 / 3 * {4, 3};
 epsilon = 0.00000001;
 ApproxSamePoint[point1_, point2_] := Round[point1, epsilon] == Round[point2, epsilon];
+
+edgeLevelUsedByMinDistanceMap = <|
+	"Dodecahedron" -> 0.689,
+	"Cube" -> 0.51,
+	"Octahedron" -> 0.289,
+	"Tetrahedron" -> 0.289,
+	"Icosahedron" -> 0.289
+|>;
 
 optimalShiftFactor = <|
 	"Dodecahedron" -> 1.04,
@@ -16,7 +28,6 @@ optimalShiftFactor = <|
 	"Octahedron" -> 1.14,
 	"Tetrahedron" -> 0.76,
 	"Icosahedron" -> 2.51
-	(* "Icosahedron" -> 0.78 *)
 |>;
 
 optimalRotationAngleFactor = <|
@@ -25,7 +36,6 @@ optimalRotationAngleFactor = <|
 	"Octahedron" -> 0.21,
 	"Tetrahedron" -> 0.21,
 	"Icosahedron" -> 0.39
-	(* "Icosahedron" -> 0.21 *)
 |>;
 
 Needs["POVRayRender`"];
@@ -38,6 +48,8 @@ colors = Join[
 		Yellow, White
 	},
 	RandomColor[100]];
+
+randomDirection = {1, Pi, Exp[1]}//N;
 
 getEdgesFromFace[face_] := Table[{face[[i+1]], face[[Mod[i+1, Length[face]] + 1]]}, {i, 0, Length[face] - 1}];
 
@@ -92,7 +104,7 @@ distSegToSeg[s1_, s2_] :=
     N[Norm[w + sc*u - tc*v]]
 ];
 
-findMinDistance[edges_, faceCenters_, findMinDistance_, shiftFactor_, rotationAngleFactor_ ] := Module[
+findMinDistance[edges_, explosionVectors_, findMinDistance_, shiftFactor_, rotationAngleFactor_ ] := Module[
 	{ rotationAngle, minDistance, copy, copyCenter, copyEdges, copyVertices, copy1Edges, copy1Vertices, copyId, copy1EdgeId, copyEdgeId },
 	
 	sideCountInFace = Length[faceCoordinates[[1]]];
@@ -100,18 +112,21 @@ findMinDistance[edges_, faceCenters_, findMinDistance_, shiftFactor_, rotationAn
 
 	minDistance = 10.0;
 
-	For[copyId = 1, copyId <= Length[faceCenters] && copyId <= 12, copyId++,
+	For[copyId = 1, copyId <= Length[explosionVectors], copyId++,
 		copy = <||>;
-		copyCenter = faceCenters[[copyId]] * shiftFactor;
+		copyCenter = explosionVectors[[copyId]] * shiftFactor;
 
 		rotationMatrix = RotationMatrix[rotationAngle, copyCenter];
 
 		copyEdges = Map[ (# + copyCenter).rotationMatrix &, edges, {2} ];
-		copyVertices = Map[ (# + copyCenter).rotationMatrix &, vertices];
+		copyEdges = Select[copyEdges, Norm[Mean[#]] < edgeLevelUsedByMinDistance + 0.01 & ];
+		(* edgeLevelUsedByMinDistance *)
+
+		(* copyVertices = Map[ (# + copyCenter).rotationMatrix &, vertices]; *)
 
 		If[copyId == 1,
 			copy1Edges = copyEdges;
-			copy1Vertices = copyVertices;
+			(* copy1Vertices = copyVertices; *)
 		];
 
 		If[copyId >= 2,
@@ -161,7 +176,7 @@ min distance: two level 1 rings next to each other
 exportPolyhedron[shape_] := Module[
 	{outputFileName, vertices, edges, faces, thickness, lighting, graph},
 
-	outputFileName = shape <> "_level_" <> ToString[displayLevel] <> ".png";
+	outputFileName = "face_explosion_" <> shape <> "_level_" <> ToString[displayLevel] <> If[halfCopies, "_half", ""] <> ".png";
 	imageFolder = "output";
 	outputFolder = FileNameJoin[{imageFolder, shape}];
 	If[!DirectoryQ[outputFolder], CreateDirectory[outputFolder]];
@@ -173,6 +188,10 @@ exportPolyhedron[shape_] := Module[
 	edges = PolyhedronData[shape, "EdgeCoordinates"]//N;
 	faces = PolyhedronData[shape, "Polygons"];
 	faceCoordinates = Map[#[[1]]&, faces];
+	edgeLevelUsedByMinDistance = If[halfCopies,
+		edgeLevelUsedByMinDistanceMap[shape],
+		100.0
+	];
 	
 	lighting = {{"Point", White, {50, -50, 50}}};
 	range = 1.0 * Norm[vertices[[1]]];
@@ -182,7 +201,9 @@ exportPolyhedron[shape_] := Module[
 
 	viewCenter = {0, 0, 0};
 	faceCenters = Table[ Mean[faceCoordinates[[k]] ], {k, 1, Length[faceCoordinates]}];
-	(* Map[Print[{#, faceCenters[[#]]//N}]&, Range[Length[faceCenters]]]; *)
+	(* Map[Print[{#, explosionVectors[[#]]//N}]&, Range[Length[explosionVectors]]]; *)
+	explosionVectors = faceCenters;
+	If[halfCopies, explosionVectors = Select[explosionVectors, #.randomDirection > 0 & ]];
 
 	elements = {};
 
@@ -194,10 +215,14 @@ exportPolyhedron[shape_] := Module[
 
 	shiftFactor = optimalShiftFactor[shape];
 	rotationAngleFactor = optimalRotationAngleFactor[shape];
+	If[halfCopies,
+		shiftFactor = 1.0;
+		rotationAngleFactor = 0.25;
+	];
 
 	range = range * (1 + shiftFactor) / 1.3;
 
-	minDistance = findMinDistance[edges, faceCenters, faceCoordinates, shiftFactor, rotationAngleFactor];
+	minDistance = findMinDistance[edges, explosionVectors, faceCoordinates, shiftFactor, rotationAngleFactor];
 	Print["minDistance, shiftFactor, rotationAngleFactor"];
 	Print[{minDistance, shiftFactor, rotationAngleFactor}];
 
@@ -205,9 +230,11 @@ exportPolyhedron[shape_] := Module[
 
 	If[searchingForOptimalFactors,
 		maxMinDistance = 0;	
-		For[shiftFactor = 2.5, shiftFactor < 2.9, shiftFactor += 0.01,
-			For[angleFactor = 0.10, angleFactor <= 0.50, angleFactor += 0.01,
-				minDistance = findMinDistance[edges, faceCenters, faceCoordinates, shiftFactor, angleFactor];
+		For[shiftFactor = 1.0, shiftFactor < 1.2, shiftFactor += 0.01,
+			Print["shiftFactor:"];
+			Print[shiftFactor];
+			For[angleFactor = 0.2, angleFactor <= 0.3, angleFactor += 0.01,
+				minDistance = findMinDistance[edges, explosionVectors, faceCoordinates, shiftFactor, angleFactor];
 				If[minDistance > maxMinDistance,
 					maxMinDistance = minDistance;
 					Print["updating maxMinDistance to:"];
@@ -227,22 +254,30 @@ exportPolyhedron[shape_] := Module[
 
 	octahedron
 	{0.0840834722251952, 1.1400000000000001, 0.21000000000000008}
-
+	
 	tetrahedron
 	{0.08361351956627538, 0.76, 0.21000000000000008}
 
 	icosahedron: questionable. too loose
 	{0.13086140887215503, 2.51, 0.39000000000000024}
 
+	half icosahedron: 10 tangled triangles:
+	{0.041784913897642786, 1., 0.25}
+
+	half octahedron: 4 tangled triangles:
+	{0.1380131118684709, 1., 0.25}
+
+	half dodecahedron: 6 tangled pentagons:
+	{0.1260997514654532, 1., 0.25}
  *)
 
 	(* Exit[]; *)
 
-	(* maxMinDistance = FindMaximum[ findMinDistance[edges, faceCenters, findMinDistance, 0.5, angleFactor], {angleFactor, 0.05} ]; *)
+	(* maxMinDistance = FindMaximum[ findMinDistance[edges, explosionVectors, findMinDistance, 0.5, angleFactor], {angleFactor, 0.05} ]; *)
 
-	For[copyId = 1, copyId <= Length[faceCenters], copyId++,
+	For[copyId = 1, copyId <= Length[explosionVectors], copyId++,
 		copy = <||>;
-		copyCenter = faceCenters[[copyId]] * shiftFactor;
+		copyCenter = explosionVectors[[copyId]] * shiftFactor;
 
 		sideCountInFace = Length[faceCoordinates[[1]]];
 		rotationAngle = 2 Pi / sideCountInFace * rotationAngleFactor;
@@ -254,6 +289,11 @@ exportPolyhedron[shape_] := Module[
 		copyEdgeCenters = Map[Mean, copyEdges];
 		copyEdgeCenterLevels = Map[Round[Norm[#], epsilon]&, copyEdgeCenters];
 		levels = copyEdgeCenterLevels//Union//Sort;
+		If[copyId == 1,
+			Print["levels"];
+			Print[levels];
+		];
+		
 		If[displayLevel > Length[levels],
 			Print["Warning: there are only " <> ToString[Length[levels]] <> " levels. Display level is reset from " <> ToString[displayLevel] <> " to the length of levels"];
 			displayLevel = Length[levels];
@@ -325,11 +365,11 @@ exportPolyhedron[shape_] := Module[
 ];
 
 shapes = {
-	(* "Dodecahedron" *)
+	"Dodecahedron"
 	(* "Cube" *)
 	(* "Octahedron" *)
 	(* "Tetrahedron" *)
-	"Icosahedron"
+	(* "Icosahedron" *)
 };
 
 Map[exportPolyhedron, shapes];
