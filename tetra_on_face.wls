@@ -14,12 +14,12 @@ ApproxSamePoint[point1_, point2_] := Round[point1, epsilon] == Round[point2, eps
 
 optimalShiftFactor = <|
 	"Octahedron" -> 0.04,
-	"Icosahedron" -> -0.98
+	"Icosahedron" -> 0.06
 |>;
 
 optimalRotationAngleFactor = <|
 	"Octahedron" -> 0.32,
-	"Icosahedron" -> 0.23
+	"Icosahedron" -> 0.30
 |>;
 
 Needs["POVRayRender`"];
@@ -152,7 +152,7 @@ exportPolyhedron[shape_] := Module[
 	range = 1.0 * Norm[vertices[[1]]];
 	color = allColors[ allSchlaefliSymbols[shape]];
 	
-	viewPoint = If[shape == "Dodecahedron", {0, 0, 10}, {50, -50, 50}];
+	viewPoint = If[shape == "Dodecahedron" || shape == "Icosahedron", {0, 0, 50}, {50, -50, 50}];
 
 	viewCenter = {0, 0, 0};
 	faceCenters = Table[ Mean[faceCoordinates[[k]] ], {k, 1, Length[faceCoordinates]}];
@@ -265,9 +265,9 @@ exportPolyhedron[shape_] := Module[
 shapes = {
 	(* "Dodecahedron" *)
 	(* "Cube" *)
-	"Octahedron"
+	(* "Octahedron" *)
 	(* "Tetrahedron" *)
-	(* "Icosahedron" *)
+	"Icosahedron"
 };
 
 Map[exportPolyhedron, shapes];
@@ -283,6 +283,6 @@ Icosahedron:
 
 Octahedron:
 {0.06580671416249433, -0.8899999999999999, 0.35000000000000014}
-
+{0.09340325585715792, 0.04000000000000076, 0.3200000000000001}
 
  *)
