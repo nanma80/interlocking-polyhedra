@@ -2,11 +2,11 @@
 
 exportToPov = True;
 specialViewPoint = False;
-displayLevel = 1;
+displayLevel = 3;
 (* searchingForOptimalFactors = True; *)
 searchingForOptimalFactors = False;
-halfCopies = True;
-(* halfCopies = False; *)
+(* halfCopies = True; *)
+halfCopies = False;
 
 (* edgeLevelUsedByMinDistance = 100; *)
 
@@ -198,7 +198,7 @@ exportPolyhedron[shape_] := Module[
 	color = allColors[ allSchlaefliSymbols[shape]];
 	
 	viewPoint = If[shape == "Dodecahedron", {0, 0, 10}, {50, -50, 50}];
-
+	(* viewPoint = {0, 0, 50}; *)
 	viewCenter = {0, 0, 0};
 	faceCenters = Table[ Mean[faceCoordinates[[k]] ], {k, 1, Length[faceCoordinates]}];
 	(* Map[Print[{#, explosionVectors[[#]]//N}]&, Range[Length[explosionVectors]]]; *)
@@ -365,9 +365,9 @@ exportPolyhedron[shape_] := Module[
 ];
 
 shapes = {
-	"Dodecahedron"
+	(* "Dodecahedron" *)
 	(* "Cube" *)
-	(* "Octahedron" *)
+	"Octahedron"
 	(* "Tetrahedron" *)
 	(* "Icosahedron" *)
 };
