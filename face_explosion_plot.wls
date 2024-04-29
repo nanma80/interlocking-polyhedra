@@ -1,6 +1,6 @@
 #!/usr/bin/env wolframscript
 
-exportToPov = True;
+exportToPov = False;
 specialViewPoint = False;
 displayLevel = 3;
 (* searchingForOptimalFactors = True; *)
@@ -24,9 +24,7 @@ edgeLevelUsedByMinDistanceMap = <|
 
 optimalShiftFactor = <|
 	"Dodecahedron" -> 1.04,
-	(* "Cube" -> 1.42, *)
-	(* "Cube" -> 0.58, *)
-	"Cube" -> 2.0,
+	"Cube" -> 1.42,
 	"Octahedron" -> 1.14,
 	"Tetrahedron" -> 0.76,
 	"Icosahedron" -> 2.51
@@ -34,9 +32,7 @@ optimalShiftFactor = <|
 
 optimalRotationAngleFactor = <|
 	"Dodecahedron" -> 0.27,
-	(* "Cube" -> 0.23, *)
-	(* "Cube" -> 0.19, *)
-	"Cube" -> 0.3,
+	"Cube" -> 0.23,
 	"Octahedron" -> 0.21,
 	"Tetrahedron" -> 0.21,
 	"Icosahedron" -> 0.39
@@ -108,19 +104,17 @@ distSegToSeg[s1_, s2_] :=
     N[Norm[w + sc*u - tc*v]]
 ];
 
-findMinDistance[edges_, explosionVectors_, findMinDistance_, shiftFactor_, rotationAngleFactor_ ] := Module[
-	{ rotationAngle, minDistance, copy, copyCenter, copyEdges, copyVertices, copy1Edges, copy1Vertices, copyId, copy1EdgeId, copyEdgeId },
-	
-	sideCountInFace = Length[faceCoordinates[[1]]];
-	rotationAngle = 2 Pi / sideCountInFace * rotationAngleFactor;
+findMinDistance[edges_, explosionVectors_, findMinDistance_, shiftDistance_, rotationAngle_, cap_ ] := Module[
+	{ minDistance, copy, copyCenter, copyEdges, copyVertices, copy1Edges, copy1Vertices, copyId, copy1EdgeId, copyEdgeId },
 
 	minDistance = 10.0;
 
 	For[copyId = 1, copyId <= Length[explosionVectors], copyId++,
 		copy = <||>;
-		copyCenter = explosionVectors[[copyId]] * shiftFactor;
+		(* copyCenter = explosionVectors[[copyId]]/Norm[explosionVectors[[copyId]]] * shiftDistance; *)
+		copyCenter = explosionVectors[[copyId]] * shiftDistance;
 
-		rotationMatrix = RotationMatrix[rotationAngle, copyCenter];
+		rotationMatrix = RotationMatrix[rotationAngle/180*Pi, copyCenter];
 
 		copyEdges = Map[ (# + copyCenter).rotationMatrix &, edges, {2} ];
 		copyEdges = Select[copyEdges, Norm[Mean[#]] < edgeLevelUsedByMinDistance + 0.01 & ];
@@ -174,13 +168,15 @@ min distance: two level 1 rings next to each other
 			];
 		];
 	];
-	Return[minDistance];
+
+	If[minDistance > cap, Return[cap], Return[minDistance]];
+	(* Return[minDistance]; *)
 ];
 
 exportPolyhedron[shape_] := Module[
 	{outputFileName, vertices, edges, faces, thickness, lighting, graph},
 
-	outputFileName = "face_explosion_" <> shape <> "_level_" <> ToString[displayLevel] <> If[halfCopies, "_half", ""] <> ".png";
+	outputFileName = "face_explosion_contour_" <> shape <> ".png";
 	imageFolder = "output";
 	outputFolder = FileNameJoin[{imageFolder, shape}];
 	If[!DirectoryQ[outputFolder], CreateDirectory[outputFolder]];
@@ -225,6 +221,35 @@ exportPolyhedron[shape_] := Module[
 	];
 
 	range = range * (1 + shiftFactor) / 1.3;
+	sideCountInFace = Length[faceCoordinates[[1]]];
+
+(* 	minDistanceTable = Table[
+		findMinDistance[edges, explosionVectors, faceCoordinates, shiftFactorParam, rotationAngleFactorParam],
+		{shiftFactorParam, 0.1, 3, 0.1},
+		{rotationAngleFactorParam, 0, 2 Pi, 0.1}
+	];
+	Print[minDistanceTable];
+ *)
+  cap = 0.2;
+
+	graph = DensityPlot[
+		findMinDistance[edges, explosionVectors, faceCoordinates, shiftDistance, rotationAngle, cap],
+		{shiftDistance, 0, 3},
+		{rotationAngle, 0, 360/sideCountInFace/2}
+		, PlotPoints -> 40
+		(* , MaxRecursion -> 1 *)
+		, Mesh -> Full
+	];
+
+	If[exportToPov,
+		If[FileExistsQ[outputFileName], DeleteFile[outputFileName]];
+		POVRayRender[graph, Method -> "Triangle", OutputPath -> outputFileName, ImageSize -> imageSize, RenderOptions -> "+A0.001 -J +UA"];
+		Run[cropCommand];
+		,
+		Export[outputFileName, graph]
+	];	
+
+	Exit[];
 
 	minDistance = findMinDistance[edges, explosionVectors, faceCoordinates, shiftFactor, rotationAngleFactor];
 	Print["minDistance, shiftFactor, rotationAngleFactor"];
@@ -234,10 +259,10 @@ exportPolyhedron[shape_] := Module[
 
 	If[searchingForOptimalFactors,
 		maxMinDistance = 0;	
-		For[shiftFactor = 1.9, shiftFactor < 2.1, shiftFactor += 0.01,
+		For[shiftFactor = 1.0, shiftFactor < 1.2, shiftFactor += 0.01,
 			Print["shiftFactor:"];
 			Print[shiftFactor];
-			For[angleFactor = 0.1, angleFactor <= 0.5, angleFactor += 0.01,
+			For[angleFactor = 0.2, angleFactor <= 0.3, angleFactor += 0.01,
 				minDistance = findMinDistance[edges, explosionVectors, faceCoordinates, shiftFactor, angleFactor];
 				If[minDistance > maxMinDistance,
 					maxMinDistance = minDistance;
@@ -255,8 +280,6 @@ exportPolyhedron[shape_] := Module[
 
 	cube
 	{0.13997235190833174, 1.4200000000000002, 0.23000000000000007}
-	{0.11848118015900957, 0.5800000000000001, 0.19000000000000006}
-	{0.08137711332564512, 2., 0.30000000000000016}
 
 	octahedron
 	{0.0840834722251952, 1.1400000000000001, 0.21000000000000008}
