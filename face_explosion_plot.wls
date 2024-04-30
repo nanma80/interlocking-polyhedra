@@ -230,11 +230,15 @@ exportPolyhedron[shape_] := Module[
 	];
 	Print[minDistanceTable];
  *)
-  cap = 0.2;
+  cap = 0.09;
+  If[shape == "Cube" || shape == "Icosahedron" , shiftDistanceMax = 0.14];
+  shiftDistanceMax = 3;
+  If[shape == "Dodecahedron", shiftDistanceMax = 2.5];
+  If[shape == "Tetrahedron", shiftDistanceMax = 3.5];
 
 	graph = DensityPlot[
 		findMinDistance[edges, explosionVectors, faceCoordinates, shiftDistance, rotationAngle, cap],
-		{shiftDistance, 0, 3},
+		{shiftDistance, 0, shiftDistanceMax},
 		{rotationAngle, 0, 360/sideCountInFace/2}
 		, PlotPoints -> 40
 		(* , MaxRecursion -> 1 *)
@@ -394,8 +398,8 @@ exportPolyhedron[shape_] := Module[
 ];
 
 shapes = {
-	(* "Dodecahedron" *)
-	"Cube"
+	"Dodecahedron"
+	(* "Cube" *)
 	(* "Octahedron" *)
 	(* "Tetrahedron" *)
 	(* "Icosahedron" *)
