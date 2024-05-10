@@ -257,6 +257,7 @@ exportPolyhedron[shape_] := Module[
 
 	(* Map[Print, Table[{getPentagonSideLength[angleInDeg/180*Pi][[1]], Round[angleInDeg, 0.001]}, {angleInDeg, -10, 10, 1}]]; *)
 (* 
+	Dodecahedron:
 	By angle:
 	This value depends on the relative lengths of the pencil and rubber bands.
 	For pencil length 19cm and pentagonal side 4.3cm, the optimal angle is 11.57
@@ -273,6 +274,9 @@ exportPolyhedron[shape_] := Module[
 
 	ArcTan[7.057339705499946/34.727145594421295]/Pi*180 => 11.4874
 
+	Icosahedron:
+	{89.77986362380813, 0.}
+	{79.28119821443863, -5.}
 *)
 
 	(* Exit[]; *)
