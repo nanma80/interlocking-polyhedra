@@ -220,7 +220,6 @@ exportPolyhedron[shape_] := Module[
 
 	rodIds = Union[rodIds];
 
-
 	rotatedAndShiftedFaces = {};
 	furtherRotationAngle = 5.596/180 * Pi;
 
@@ -248,7 +247,7 @@ exportPolyhedron[shape_] := Module[
 	pentagonSideLengthAndEdges = getPentagonSideLength[furtherRotationAngle];
 	pentagonSideLength = pentagonSideLengthAndEdges[[1]];
 	edges = pentagonSideLengthAndEdges[[2]];
-	Print[pentagonSideLength];
+	Print[N[edges[[15]]]];
 
 	(* Map[Print, Table[{findMinDistance[angleInDeg/180*Pi], Round[angleInDeg, 0.001]}, {angleInDeg, 11.5, 11.7, .01}]]; *)
 
@@ -266,6 +265,11 @@ exportPolyhedron[shape_] := Module[
 	By side length:
 	{43.08756952045353, 0.}
 	{41.65868725792897, 5.596}
+
+	for the optimal, 5.596, an edge is:
+	{{-7.057339705499946, -34.727145594421295, 94.73750026405159}, {7.057339705499946, -34.727145594421295, -94.73750026405159}}
+
+	ArcTan[7.057339705499946/34.727145594421295]/Pi*180 => 11.4874
 
 *)
 
