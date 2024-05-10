@@ -173,7 +173,6 @@ exportPolyhedron[shape_] := Module[
 	faceCoordinates = Map[#[[1]]&, faces];
 	faceCenters = Table[ Mean[faceCoordinates[[k]] ]//FullSimplify, {k, 1, Length[faceCoordinates]}];
 
-
 	faceCenterIndexMap = <||>;
 	oppositeFaceIdMap = <||>;
 	For[faceId = 1, faceId <= Length[faceCenters], faceId++,
@@ -221,7 +220,8 @@ exportPolyhedron[shape_] := Module[
 	rodIds = Union[rodIds];
 
 	rotatedAndShiftedFaces = {};
-	furtherRotationAngle = 5.596/180 * Pi;
+	furtherRotationAngle = -5/180 * Pi;
+	(* If[shape == "Dodecahedron", furtherRotationAngle = 5.596/180 * Pi]; *)
 
 	Print["furtherRotationAngle"];
 	Print[{furtherRotationAngle, furtherRotationAngle*180./Pi}];
@@ -247,13 +247,15 @@ exportPolyhedron[shape_] := Module[
 	pentagonSideLengthAndEdges = getPentagonSideLength[furtherRotationAngle];
 	pentagonSideLength = pentagonSideLengthAndEdges[[1]];
 	edges = pentagonSideLengthAndEdges[[2]];
-	Print[N[edges[[15]]]];
+	(* Print[N[edges[[15]]]]; *)
+	Print["pentagonSideLength"];
+	Print[pentagonSideLength];
 
 	(* Map[Print, Table[{findMinDistance[angleInDeg/180*Pi], Round[angleInDeg, 0.001]}, {angleInDeg, 11.5, 11.7, .01}]]; *)
 
 	(* Map[Print, Table[{findMinDistance[angleInDeg/180*Pi], Round[angleInDeg, 0.001]}, {angleInDeg, -20, 30, 10}]]; *)
 
-	(* Map[Print, Table[{getPentagonSideLength[angleInDeg/180*Pi][[1]], Round[angleInDeg, 0.001]}, {angleInDeg, 5.59, 5.61, .001}]]; *)
+	(* Map[Print, Table[{getPentagonSideLength[angleInDeg/180*Pi][[1]], Round[angleInDeg, 0.001]}, {angleInDeg, -10, 10, 1}]]; *)
 (* 
 	By angle:
 	This value depends on the relative lengths of the pencil and rubber bands.
@@ -281,20 +283,21 @@ exportPolyhedron[shape_] := Module[
 	
 	viewPoint = If[shape == "Dodecahedron", faceCenters[[3]] * 100, {50, -50, 50}];
 	(* viewPoint = {50, -40, 20}; *)
+	viewPoint = {0, 0, 50};
+	(* viewPoint = {50, -50, 50}; *)
 
 	viewCenter = {0, 0, 0};
 	
 	elements = {};
 
   thickness = pencilDiameter/2;
-	AppendTo[ elements, { FaceForm[Yellow], Map[Cylinder[#, thickness]&, edges] } ];
+	AppendTo[ elements, { FaceForm[Yellow], Map[Cylinder[#, thickness/10]&, edges/10] } ];
 
 	graph = Graphics3D[
 		elements,
 		ViewPoint -> viewPoint,
 		Lighting -> lighting
 	];
-
 
 	If[exportToPov,
 		If[FileExistsQ[outputFileName], DeleteFile[outputFileName]];
@@ -306,11 +309,11 @@ exportPolyhedron[shape_] := Module[
 ];
 
 shapes = {
-	"Dodecahedron"
+	(* "Dodecahedron" *)
 	(* "Cube" *)
 	(* "Octahedron" *)
 	(* "Tetrahedron" *)
-	(* "Icosahedron" *)
+	"Icosahedron"
 };
 
 Map[exportPolyhedron, shapes];
