@@ -10,6 +10,9 @@ imageSize = 720 / 3 * {4, 3};
 epsilon = 0.00000001;
 ApproxSamePoint[point1_, point2_] := Round[point1, epsilon] == Round[point2, epsilon];
 
+pencilDiameter = 7;
+pencilLength = 190;
+
 optimalShiftFactor = <|
 	"Dodecahedron" -> 1.04,
 	(* "Cube" -> 1.42, *)
@@ -96,33 +99,56 @@ distSegToSeg[s1_, s2_] :=
     N[Norm[w + sc*u - tc*v]]
 ];
 
-findMinDistance[furtherRotationAngle_ ] := Module[
+getPentagonSideLength[furtherRotationAngle_] := Module[
+	{edges, minDistance, scalingFactor, edgeId, edge, edgeCenter, edgeLength, extendedEdge},
+	edges = getRotatedEdges[furtherRotationAngle];
+
+ 	minDistance = findMinDistance[furtherRotationAngle];
+
+	scalingFactor = pencilDiameter/minDistance;
+	edges = edges * scalingFactor;
+	For[edgeId = 1, edgeId <= Length[edges], edgeId++,
+		edge = edges[[edgeId]];
+		edgeCenter = Mean[edge];
+		edgeLength = EuclideanDistance[edge[[1]], edge[[2]]];
+		extendedEdge = Map[(# - edgeCenter) * pencilLength/edgeLength + edgeCenter &, edge];
+		edges[[edgeId]] = extendedEdge;
+	];
+
+	Return[{ EuclideanDistance[ edges[[1]][[1]], edges[[2]][[1]] ], edges }];
+];
+
+findMinDistance[furtherRotationAngle_] := Module[
 	{edges, minDistance, edgeId, edgeDistance},
 	edges = getRotatedEdges[furtherRotationAngle];
 
 	minDistance = -1;
 
+	edgeCountMatchingMinDistance = 0;
+
 	For[edgeId = 2, edgeId <= Length[edges], edgeId++,
 		edgeDistance = distSegToSeg[edges[[1]], edges[[edgeId]] ];
-		If[minDistance < 0 || edgeDistance < minDistance, minDistance = edgeDistance];
+		If[minDistance < 0 || edgeDistance < minDistance, 
+			edgeCountMatchingMinDistance = 1;
+			minDistance = edgeDistance,
+			If[edgeDistance < minDistance + 10 epsilon,
+				edgeCountMatchingMinDistance ++;
+
+			];
+		];
 	];
 
+	Print["edge count with minDistance " <> IntegerString[edgeCountMatchingMinDistance]];
 	Return[minDistance];
 ];
-
 
 getRotatedEdges[furtherRotationAngle_] := Module[
 	{rotatedAndShiftedFaces, inFaceDistance, height, shiftFactor, rotationMatrix, faceId, edges },
 	rotatedAndShiftedFaces = {};
 
-	inFaceDistance = 2 faceCircumRadius Sin[Abs[furtherRotationAngle]];
-	height = Sqrt[ targetLength^2 - inFaceDistance^2 ];
-
-	shiftFactor = height/inRadius/2 - 1;
-
 	For[faceId = 1, faceId <= Length[faceCenters], faceId++,
-		rotationMatrix = RotationMatrix[furtherRotationAngle, faceCenters[[faceId]]];
-		rotatedAndShiftedFace = Map[ (# + faceCenters[[faceId]] * shiftFactor).rotationMatrix &, rotatedFaces[[faceId]]];
+		rotationMatrix = RotationMatrix[furtherRotationAngle, faceCenters[[faceId]]]//N;
+		rotatedAndShiftedFace = Map[ #.rotationMatrix &, rotatedFaces[[faceId]] ];
 		AppendTo[rotatedAndShiftedFaces, rotatedAndShiftedFace];
 	];
 
@@ -146,10 +172,12 @@ exportPolyhedron[shape_] := Module[
 	faces = PolyhedronData[shape, "Polygons"];
 	faceCoordinates = Map[#[[1]]&, faces];
 	faceCenters = Table[ Mean[faceCoordinates[[k]] ]//FullSimplify, {k, 1, Length[faceCoordinates]}];
+
+
 	faceCenterIndexMap = <||>;
 	oppositeFaceIdMap = <||>;
 	For[faceId = 1, faceId <= Length[faceCenters], faceId++,
-		faceCenterIndexMap[ Round[faceCenters[[faceId]], epsilon] ] = faceId
+		faceCenterIndexMap[ Round[faceCenters[[faceId]], epsilon] ] = faceId;
 	];
 
 	For[faceId = 1, faceId <= Length[faceCenters], faceId++,
@@ -194,7 +222,8 @@ exportPolyhedron[shape_] := Module[
 
 
 	rotatedAndShiftedFaces = {};
-	furtherRotationAngle = 11.57/180 * Pi;
+	furtherRotationAngle = 5.596/180 * Pi;
+
 	Print["furtherRotationAngle"];
 	Print[{furtherRotationAngle, furtherRotationAngle*180./Pi}];
 
@@ -208,29 +237,37 @@ exportPolyhedron[shape_] := Module[
 
 	(* 
 		from measuring my model. 
-		length of a pencil = 19cm.
-		side of a pentagon = 4.3 enforced by rubber bands
+		length of a pencil = 190mm.
+		side of a pentagon = 43mm enforced by rubber bands, measured from my model
+		Assume that the outer diameter of a pencil is 7mm
 	*)
-	targetLength = 19/4.3;
-	Print["targetLength"];
-	Print[targetLength];
+	targetLength = inRadius//N;
 
-	edges = getRotatedEdges[furtherRotationAngle];
+	(* edges = getRotatedEdges[furtherRotationAngle]; *)
 
- 	minDistance = findMinDistance[furtherRotationAngle];
- 	Print["minDistance"];
-	Print[minDistance];
+	pentagonSideLengthAndEdges = getPentagonSideLength[furtherRotationAngle];
+	pentagonSideLength = pentagonSideLengthAndEdges[[1]];
+	edges = pentagonSideLengthAndEdges[[2]];
+	Print[pentagonSideLength];
 
 	(* Map[Print, Table[{findMinDistance[angleInDeg/180*Pi], Round[angleInDeg, 0.001]}, {angleInDeg, 11.5, 11.7, .01}]]; *)
 
+	(* Map[Print, Table[{findMinDistance[angleInDeg/180*Pi], Round[angleInDeg, 0.001]}, {angleInDeg, -20, 30, 10}]]; *)
+
+	(* Map[Print, Table[{getPentagonSideLength[angleInDeg/180*Pi][[1]], Round[angleInDeg, 0.001]}, {angleInDeg, 5.59, 5.61, .001}]]; *)
 (* 
-This value depends on the relative lengths of the pencil and rubber bands.
-For pencil length 19cm and pentagonal side 4.3cm, the optimal angle is 11.57
+	By angle:
+	This value depends on the relative lengths of the pencil and rubber bands.
+	For pencil length 19cm and pentagonal side 4.3cm, the optimal angle is 11.57
 
-{0.16245984811645323, 0.}
-{0.16825398343783893, 11.57}
+	{0.16245984811645323, 0.}
+	{0.16825398343783893, 11.57}
 
- *)
+	By side length:
+	{43.08756952045353, 0.}
+	{41.65868725792897, 5.596}
+
+*)
 
 	(* Exit[]; *)
 	
@@ -238,13 +275,14 @@ For pencil length 19cm and pentagonal side 4.3cm, the optimal angle is 11.57
 	range = 1.0 * Norm[vertices[[1]]];
 	(* color = allColors[ allSchlaefliSymbols[shape]]; *)
 	
-	viewPoint = If[shape == "Dodecahedron", {0, 0, 50}, {50, -50, 50}];
+	viewPoint = If[shape == "Dodecahedron", faceCenters[[3]] * 100, {50, -50, 50}];
 	(* viewPoint = {50, -40, 20}; *)
+
 	viewCenter = {0, 0, 0};
 	
 	elements = {};
 
-  thickness = minDistance/2;
+  thickness = pencilDiameter/2;
 	AppendTo[ elements, { FaceForm[Yellow], Map[Cylinder[#, thickness]&, edges] } ];
 
 	graph = Graphics3D[
