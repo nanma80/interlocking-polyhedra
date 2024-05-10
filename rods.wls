@@ -96,43 +96,38 @@ distSegToSeg[s1_, s2_] :=
     N[Norm[w + sc*u - tc*v]]
 ];
 
-findMinDistance[edges_, explosionVectors_, findMinDistance_, shiftFactor_, rotationAngleFactor_ ] := Module[
-	{ rotationAngle, minDistance, copy, copyCenter, copyEdges, copyVertices, copy1Edges, copy1Vertices, copyId, copy1EdgeId, copyEdgeId },
-	
-	sideCountInFace = Length[faceCoordinates[[1]]];
-	rotationAngle = 2 Pi / sideCountInFace * rotationAngleFactor;
+findMinDistance[furtherRotationAngle_ ] := Module[
+	{edges, minDistance, edgeId, edgeDistance},
+	edges = getRotatedEdges[furtherRotationAngle];
 
-	minDistance = 10.0;
+	minDistance = -1;
 
-	For[copyId = 1, copyId <= Length[explosionVectors], copyId++,
-		copy = <||>;
-		copyCenter = explosionVectors[[copyId]] * shiftFactor;
-
-		rotationMatrix = RotationMatrix[rotationAngle, copyCenter];
-
-		copyEdges = Map[ (# + copyCenter).rotationMatrix &, edges, {2} ];
-
-		(* copyVertices = Map[ (# + copyCenter).rotationMatrix &, vertices]; *)
-
-		If[copyId == 1,
-			copy1Edges = copyEdges;
-			(* copy1Vertices = copyVertices; *)
-		];
-
-		If[copyId >= 2,
-			For[copy1EdgeId = 1, copy1EdgeId <= Length[copy1Edges], copy1EdgeId++,
-				For[copyEdgeId = 1, copyEdgeId <= Length[copyEdges], copyEdgeId++,
-					distance = distSegToSeg[ copy1Edges[[copy1EdgeId]], copyEdges[[copyEdgeId]] ];
-					If[distance < minDistance, minDistance = distance];
-					(* If[distance < minDistance * 1.03, Print[{distance, copyId, copy1EdgeId, copyEdgeId}]]; *)
-					If[minDistance < epsilon,
-						Return[0];
-					];
-				]
-			];
-		];
+	For[edgeId = 2, edgeId <= Length[edges], edgeId++,
+		edgeDistance = distSegToSeg[edges[[1]], edges[[edgeId]] ];
+		If[minDistance < 0 || edgeDistance < minDistance, minDistance = edgeDistance];
 	];
+
 	Return[minDistance];
+];
+
+
+getRotatedEdges[furtherRotationAngle_] := Module[
+	{rotatedAndShiftedFaces, inFaceDistance, height, shiftFactor, rotationMatrix, faceId, edges },
+	rotatedAndShiftedFaces = {};
+
+	inFaceDistance = 2 faceCircumRadius Sin[Abs[furtherRotationAngle]];
+	height = Sqrt[ targetLength^2 - inFaceDistance^2 ];
+
+	shiftFactor = height/inRadius/2 - 1;
+
+	For[faceId = 1, faceId <= Length[faceCenters], faceId++,
+		rotationMatrix = RotationMatrix[furtherRotationAngle, faceCenters[[faceId]]];
+		rotatedAndShiftedFace = Map[ (# + faceCenters[[faceId]] * shiftFactor).rotationMatrix &, rotatedFaces[[faceId]]];
+		AppendTo[rotatedAndShiftedFaces, rotatedAndShiftedFace];
+	];
+
+	edges = Map[{ rotatedAndShiftedFaces[[#[[1]][[1]]]][[ #[[1]][[2]] ]], rotatedAndShiftedFaces[[#[[2]][[1]]]][[ #[[2]][[2]] ]] }&, rodIds ];
+	Return[edges];
 ];
 
 exportPolyhedron[shape_] := Module[
@@ -165,7 +160,7 @@ exportPolyhedron[shape_] := Module[
 	Print[oppositeFaceIdMap];
 
 	sideCountInFace = Length[faceCoordinates[[1]]];
-	initialRotationAngle = 2 Pi / sideCountInFace * 1/4;
+	initialRotationAngle = -2 Pi / sideCountInFace * 1/4;
 
 	rotatedFaces = {};
 	
@@ -187,139 +182,74 @@ exportPolyhedron[shape_] := Module[
 			oppositeVertexId = orderedDistances[[1]][[1]];
 			originalEdgeLength = orderedDistances[[1]][[2]];
 
-			If[faceId == 1 && vertexId == 1, 
+(* 			If[faceId == 1 && vertexId == 1, 
 				Print[originalEdgeLength/2//N];
-			];
+			]; *)
 			rodId = Sort[{ {faceId, vertexId}, {oppositeFaceId, oppositeVertexId} }];
 			AppendTo[rodIds, rodId];
 		];
 	];
 
 	rodIds = Union[rodIds];
-	Print[rodIds//Length];
+
 
 	rotatedAndShiftedFaces = {};
-	furtherRotationAngle = - 0.3;
-	shiftFactor = 1.0;
-	Print[ faceCenters[[4]][[3]]//N ];
-	inRadius = Sqrt[5/8 + 11/(8*Sqrt[5])];
-	Print[inRadius//N];
+	furtherRotationAngle = 11.57/180 * Pi;
+	Print["furtherRotationAngle"];
+	Print[{furtherRotationAngle, furtherRotationAngle*180./Pi}];
 
+	(*
+		0 rotation:
+		0.16245984811645323 
+	*)
 
-	For[faceId = 1, faceId <= Length[faceCenters], faceId++,
-		rotationMatrix = RotationMatrix[furtherRotationAngle, faceCenters[[faceId]]];
-		rotatedAndShiftedFace = Map[ (# + faceCenters[[faceId]] * shiftFactor).rotationMatrix &, rotatedFaces[[faceId]]];
-		AppendTo[rotatedAndShiftedFaces, rotatedAndShiftedFace];
-	];
+	inRadius = Norm[faceCenters[[1]]];
+	faceCircumRadius = 1/2/Sin[Pi/sideCountInFace];
 
-	edges = Map[{ rotatedAndShiftedFaces[[#[[1]][[1]]]][[ #[[1]][[2]] ]], rotatedAndShiftedFaces[[#[[2]][[1]]]][[ #[[2]][[2]] ]] }&, rodIds ];
+	(* 
+		from measuring my model. 
+		length of a pencil = 19cm.
+		side of a pentagon = 4.3 enforced by rubber bands
+	*)
+	targetLength = 19/4.3;
+	Print["targetLength"];
+	Print[targetLength];
 
-	minDistance = 100.0;
+	edges = getRotatedEdges[furtherRotationAngle];
 
-	For[edgeId = 2, edgeId <= Length[edges], edgeId++,
-		edgeDistance = distSegToSeg[edges[[1]], edges[[edgeId]] ];
-		If[edgeDistance < minDistance, minDistance = edgeDistance];
-	];
+ 	minDistance = findMinDistance[furtherRotationAngle];
+ 	Print["minDistance"];
 	Print[minDistance];
 
+	(* Map[Print, Table[{findMinDistance[angleInDeg/180*Pi], Round[angleInDeg, 0.001]}, {angleInDeg, 11.5, 11.7, .01}]]; *)
 
-	(* minDistance = findMinDistance[edges, explosionVectors, faceCoordinates, shiftFactor, rotationAngleFactor]; *)
+(* 
+This value depends on the relative lengths of the pencil and rubber bands.
+For pencil length 19cm and pentagonal side 4.3cm, the optimal angle is 11.57
 
+{0.16245984811645323, 0.}
+{0.16825398343783893, 11.57}
 
-	Exit[];
+ *)
+
+	(* Exit[]; *)
 	
 	lighting = {{"Point", White, {50, -50, 50}}};
 	range = 1.0 * Norm[vertices[[1]]];
 	(* color = allColors[ allSchlaefliSymbols[shape]]; *)
 	
-	(* viewPoint = If[shape == "Dodecahedron", {0, 0, 10}, {50, -50, 50}]; *)
-	viewPoint = {50, -40, 20};
+	viewPoint = If[shape == "Dodecahedron", {0, 0, 50}, {50, -50, 50}];
+	(* viewPoint = {50, -40, 20}; *)
 	viewCenter = {0, 0, 0};
-	(* faceCenters = Table[ Mean[faceCoordinates[[k]] ], {k, 1, Length[faceCoordinates]}]; *)
-	(* Map[Print[{#, explosionVectors[[#]]//N}]&, Range[Length[explosionVectors]]]; *)
-	(* explosionVectors = faceCenters; *)
 	
 	elements = {};
-(* 
-	core = <||>;
-	core["edges"] = edges;
-	core["vertices"] = vertices;
 
-	copies = {};
-
-	shiftFactor = optimalShiftFactor[shape];
-	rotationAngleFactor = optimalRotationAngleFactor[shape];
-
-	range = range * (1 + shiftFactor) / 1.3;
-
-	minDistance = findMinDistance[edges, explosionVectors, faceCoordinates, shiftFactor, rotationAngleFactor];
-	Print["minDistance, shiftFactor, rotationAngleFactor"];
-	Print[{minDistance, shiftFactor, rotationAngleFactor}];
-
-	thickness = minDistance/2;
-
-	If[searchingForOptimalFactors,
-		maxMinDistance = 0;	
-		For[shiftFactor = 1.9, shiftFactor < 2.1, shiftFactor += 0.01,
-			Print["shiftFactor:"];
-			Print[shiftFactor];
-			For[angleFactor = 0.1, angleFactor <= 0.5, angleFactor += 0.01,
-				minDistance = findMinDistance[edges, explosionVectors, faceCoordinates, shiftFactor, angleFactor];
-				If[minDistance > maxMinDistance,
-					maxMinDistance = minDistance;
-					Print["updating maxMinDistance to:"];
-					Print[{ maxMinDistance, shiftFactor, angleFactor } ];
-				];
-			];
-		];
-		Exit[];
-	]; *)
-
-	(* Exit[]; *)
-(* 
-	For[copyId = 1, copyId <= Length[explosionVectors], copyId++,
-		copy = <||>;
-		copyCenter = explosionVectors[[copyId]] * shiftFactor;
-
-		sideCountInFace = Length[faceCoordinates[[1]]];
-		rotationAngle = 2 Pi / sideCountInFace * rotationAngleFactor;
-		rotationMatrix = RotationMatrix[rotationAngle, copyCenter];
-
-		copyEdges = Map[ (# + copyCenter).rotationMatrix &, edges, {2} ];
-		copyVertices = Map[ (# + copyCenter).rotationMatrix &, vertices];
-		copyFaces = Map[ (# + copyCenter).rotationMatrix &, faceCoordinates, {2} ];
-		copyEdgeCenters = Map[Mean, copyEdges];
-		copyEdgeCenterLevels = Map[Round[Norm[#], epsilon]&, copyEdgeCenters];
-		levels = copyEdgeCenterLevels//Union//Sort;
-		If[copyId == 1,
-			Print["levels"];
-			Print[levels];
-		];
-		
-		If[displayLevel > Length[levels],
-			Print["Warning: there are only " <> ToString[Length[levels]] <> " levels. Display level is reset from " <> ToString[displayLevel] <> " to the length of levels"];
-			displayLevel = Length[levels];
-		];
-		displayEdges = Select[copyEdges, Norm[Mean[#]] < levels[[displayLevel]] + 10 epsilon & ];
-
-		displayVertices = Union[Flatten[displayEdges, 1], SameTest -> ApproxSamePoint];
-
-		color = colors[[copyId]];
-
-		opacity = 1.0;
-
-		AppendTo[ elements, { FaceForm[color], Map[Cylinder[#, thickness]&, displayEdges] } ];
-		AppendTo[ elements, { FaceForm[color], Map[Sphere[#, thickness]&, displayVertices] } ];
-		(* AppendTo[ elements, { FaceForm[color], Opacity[opacity], Map[Polygon[#]&, copyFaces] } ]; *)
-	];
- *)
-  thickness = 0.03;
+  thickness = minDistance/2;
 	AppendTo[ elements, { FaceForm[Yellow], Map[Cylinder[#, thickness]&, edges] } ];
 
 	graph = Graphics3D[
 		elements,
 		ViewPoint -> viewPoint,
-		(* PlotRange -> {{viewCenter[[1]]-range, viewCenter[[1]]+range}, {viewCenter[[2]]-range, viewCenter[[2]]+range}, {viewCenter[[3]]-range, viewCenter[[3]]+range}}, *)
 		Lighting -> lighting
 	];
 
