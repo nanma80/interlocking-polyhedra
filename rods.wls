@@ -6,6 +6,12 @@ displayLevel = 3;
 (* searchingForOptimalFactors = True; *)
 searchingForOptimalFactors = False;
 
+withRubberBands = False;
+(* withRubberBands = True; *)
+
+noSkew = False;
+(* noSkew = True; *)
+
 imageSize = 720 / 3 * {4, 3};
 epsilon = 0.00000001;
 ApproxSamePoint[point1_, point2_] := Round[point1, epsilon] == Round[point2, epsilon];
@@ -133,7 +139,6 @@ findMinDistance[furtherRotationAngle_] := Module[
 			minDistance = edgeDistance,
 			If[edgeDistance < minDistance + 10 epsilon,
 				edgeCountMatchingMinDistance ++;
-
 			];
 		];
 	];
@@ -159,7 +164,7 @@ getRotatedEdges[furtherRotationAngle_] := Module[
 exportPolyhedron[shape_] := Module[
 	{outputFileName, vertices, edges, faces, thickness, lighting, graph},
 
-	outputFileName = "rods_" <> shape <> ".png";
+	outputFileName = "rods_" <> shape <> If[withRubberBands, "_withRubberBands", ""] <> If[noSkew, "_noSkew", ""] <> ".png";
 	imageFolder = "output";
 	outputFolder = FileNameJoin[{imageFolder, shape}];
 	If[!DirectoryQ[outputFolder], CreateDirectory[outputFolder]];
@@ -183,8 +188,6 @@ exportPolyhedron[shape_] := Module[
 		oppositeFaceCenter = Round[ -faceCenters[[faceId]], epsilon ];
 		oppositeFaceIdMap[ faceId ] = faceCenterIndexMap[oppositeFaceCenter];
 	];
-
-	Print[oppositeFaceIdMap];
 
 	sideCountInFace = Length[faceCoordinates[[1]]];
 	initialRotationAngle = -2 Pi / sideCountInFace * 1/4;
@@ -217,11 +220,19 @@ exportPolyhedron[shape_] := Module[
 		];
 	];
 
-	rodIds = Union[rodIds];
+	rodIds = Union[rodIds];	
+	faceRodMap = <||>;
+	For[rodId = 1, rodId <= Length[rodIds], rodId++,
+		rod = rodIds[[rodId]];
+		faceRodMap[ rod[[1]] ] = {rodId, 1};
+		faceRodMap[ rod[[2]] ] = {rodId, 2};
+	];
 
 	rotatedAndShiftedFaces = {};
 	furtherRotationAngle = -5/180 * Pi;
-	(* If[shape == "Dodecahedron", furtherRotationAngle = 5.596/180 * Pi]; *)
+	If[shape == "Dodecahedron", furtherRotationAngle = 5.596/180 * Pi];
+	If[shape == "Icosahedron", furtherRotationAngle = -5.984/180 * Pi];
+	If[noSkew, 	furtherRotationAngle = 0.0 ];
 
 	Print["furtherRotationAngle"];
 	Print[{furtherRotationAngle, furtherRotationAngle*180./Pi}];
@@ -251,11 +262,26 @@ exportPolyhedron[shape_] := Module[
 	Print["pentagonSideLength"];
 	Print[pentagonSideLength];
 
+	rubberBands = {};
+	rubberBandDepth = 5; (* distance from rubber band vertex to pencil ends, in mm *)
+	For[faceId = 1, faceId <= Length[faceCenters], faceId++,
+		rubberBandFaceCoordinates = {};
+		For[vertexId = 1, vertexId <= sideCountInFace, vertexId++,
+			rod = faceRodMap[{faceId, vertexId}];
+			nearEnd = edges[[rod[[1]] ]][[rod[[2]]]];
+			farEnd = edges[[rod[[1]] ]][[3 - rod[[2]]]];
+			rubberBandVertex = (nearEnd * ( pencilLength - rubberBandDepth ) + farEnd * rubberBandDepth) / pencilLength;
+			AppendTo[ rubberBandFaceCoordinates, rubberBandVertex ];
+		];
+		rubberBands = Join[rubberBands, getEdgesFromFace[rubberBandFaceCoordinates]];
+	];
+
 	(* Map[Print, Table[{findMinDistance[angleInDeg/180*Pi], Round[angleInDeg, 0.001]}, {angleInDeg, 11.5, 11.7, .01}]]; *)
 
 	(* Map[Print, Table[{findMinDistance[angleInDeg/180*Pi], Round[angleInDeg, 0.001]}, {angleInDeg, -20, 30, 10}]]; *)
 
-	(* Map[Print, Table[{getPentagonSideLength[angleInDeg/180*Pi][[1]], Round[angleInDeg, 0.001]}, {angleInDeg, -10, 10, 1}]]; *)
+	(* Map[Print, Table[{getPentagonSideLength[angleInDeg/180*Pi][[1]], Round[angleInDeg, 0.001]}, {angleInDeg, -5.99, -5.97, .001}]]; *)
+	(* Exit[]; *)
 (* 
 	Dodecahedron:
 	By angle:
@@ -276,18 +302,23 @@ exportPolyhedron[shape_] := Module[
 
 	Icosahedron:
 	{89.77986362380813, 0.}
-	{79.28119821443863, -5.}
+	{77.88710150512247, -5.984}
 *)
 
-	(* Exit[]; *)
 	
 	lighting = {{"Point", White, {50, -50, 50}}};
 	range = 1.0 * Norm[vertices[[1]]];
 	(* color = allColors[ allSchlaefliSymbols[shape]]; *)
 	
-	viewPoint = If[shape == "Dodecahedron", faceCenters[[3]] * 100, {50, -50, 50}];
+	viewPoint = {50, -50, 50};
+	If[shape == "Dodecahedron", viewPoint = {0, 0, 50}];
+	If[shape == "Icosahedron", viewPoint = {0, 0, 50}];
+	
 	(* viewPoint = {50, -40, 20}; *)
-	viewPoint = {0, 0, 50};
+	(* viewPoint = {50, -50, 50}; *)
+	(* Map[Print[{#, vertices[[#]]//N}]&, Range[20]]; *)
+	(* Exit[]; *)
+	(* viewPoint = vertices[[5]] * 100; *)
 	(* viewPoint = {50, -50, 50}; *)
 
 	viewCenter = {0, 0, 0};
@@ -297,6 +328,10 @@ exportPolyhedron[shape_] := Module[
   thickness = pencilDiameter/2;
 	AppendTo[ elements, { FaceForm[Yellow], Map[Cylinder[#, thickness/10]&, edges/10] } ];
 
+	If[withRubberBands,
+		AppendTo[ elements, { FaceForm[Brown], Map[Cylinder[#, thickness/20]&, rubberBands/10] } ];
+	];
+	
 	graph = Graphics3D[
 		elements,
 		ViewPoint -> viewPoint,
