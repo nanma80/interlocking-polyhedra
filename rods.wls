@@ -6,8 +6,8 @@ displayLevel = 3;
 (* searchingForOptimalFactors = True; *)
 searchingForOptimalFactors = False;
 
-withRubberBands = False;
-(* withRubberBands = True; *)
+(* withRubberBands = False; *)
+withRubberBands = True;
 
 noSkew = False;
 (* noSkew = True; *)
@@ -16,8 +16,13 @@ imageSize = 720 / 3 * {4, 3};
 epsilon = 0.00000001;
 ApproxSamePoint[point1_, point2_] := Round[point1, epsilon] == Round[point2, epsilon];
 
-pencilDiameter = 7;
-pencilLength = 190;
+(* standard pencil *)
+(* pencilDiameter = 7; *)
+(* pencilLength = 190; *)
+
+(* straw *)
+pencilDiameter = 6;
+pencilLength = 210;
 
 optimalShiftFactor = <|
 	"Dodecahedron" -> 1.04,
@@ -303,6 +308,11 @@ exportPolyhedron[shape_] := Module[
 	Icosahedron:
 	{89.77986362380813, 0.}
 	{77.88710150512247, -5.984}
+
+	Icosahedron with straws:
+	{76.9541688204071, 0}
+	{67.37978902964986, -5.984}
+
 *)
 
 	
