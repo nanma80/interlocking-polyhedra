@@ -17,12 +17,12 @@ epsilon = 0.00000001;
 ApproxSamePoint[point1_, point2_] := Round[point1, epsilon] == Round[point2, epsilon];
 
 (* standard pencil *)
-(* pencilDiameter = 7; *)
-(* pencilLength = 190; *)
+pencilDiameter = 7;
+pencilLength = 190;
 
 (* straw *)
-pencilDiameter = 6;
-pencilLength = 210;
+(* pencilDiameter = 6; *)
+(* pencilLength = 210; *)
 
 optimalShiftFactor = <|
 	"Dodecahedron" -> 1.04,
@@ -237,6 +237,7 @@ exportPolyhedron[shape_] := Module[
 	furtherRotationAngle = -5/180 * Pi;
 	If[shape == "Dodecahedron", furtherRotationAngle = 5.596/180 * Pi];
 	If[shape == "Icosahedron", furtherRotationAngle = -5.984/180 * Pi];
+	If[shape == "Octahedron", furtherRotationAngle = -0.192/180 * Pi];
 	If[noSkew, 	furtherRotationAngle = 0.0 ];
 
 	Print["furtherRotationAngle"];
@@ -285,7 +286,7 @@ exportPolyhedron[shape_] := Module[
 
 	(* Map[Print, Table[{findMinDistance[angleInDeg/180*Pi], Round[angleInDeg, 0.001]}, {angleInDeg, -20, 30, 10}]]; *)
 
-	(* Map[Print, Table[{getPentagonSideLength[angleInDeg/180*Pi][[1]], Round[angleInDeg, 0.001]}, {angleInDeg, -5.99, -5.97, .001}]]; *)
+	(* Map[Print, Table[{getPentagonSideLength[angleInDeg/180*Pi][[1]], Round[angleInDeg, 0.001]}, {angleInDeg, -0.193, -0.191, 0.001}]]; *)
 	(* Exit[]; *)
 (* 
 	Dodecahedron:
@@ -312,6 +313,10 @@ exportPolyhedron[shape_] := Module[
 	Icosahedron with straws:
 	{76.9541688204071, 0}
 	{67.37978902964986, -5.984}
+
+	octahedron with standard pencil:
+	{22.52431084096374, 0.}
+	{22.50980687113393, -0.192}
 
 *)
 
@@ -360,9 +365,9 @@ exportPolyhedron[shape_] := Module[
 shapes = {
 	(* "Dodecahedron" *)
 	(* "Cube" *)
-	(* "Octahedron" *)
+	"Octahedron"
 	(* "Tetrahedron" *)
-	"Icosahedron"
+	(* "Icosahedron" *)
 };
 
 Map[exportPolyhedron, shapes];

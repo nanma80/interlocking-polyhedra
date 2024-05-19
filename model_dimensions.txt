@@ -1,3 +1,17 @@
+10 triangular prisms
+First using straws
+triangle side length: let's use 90mm
+
+Icosahedron with pencils:
+{89.77986362380813, 0.}
+{77.88710150512247, -5.984}
+
+Icosahedron with straws:
+{76.9541688204071, 0}
+{67.37978902964986, -5.984}
+
+
+====
 Model using straws
 
 measured perimeter = 20mm
