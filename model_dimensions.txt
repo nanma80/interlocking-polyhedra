@@ -1,3 +1,32 @@
+Pencil model scaffold
+Assuming the circum radius of a pencil is 7mm
+
+6 groups of 5 pencils:
+pentagons:
+edge length:
+no skew
+{43.08756952045353, 0.}
+
+skew
+{41.65868725792897, 5.596}
+
+Radius of the pentagon:
+43.08756952045353/2/Sin(pi/5) = 36.65
+
+
+10 groups of 3 pencils:
+triangles:
+no skew
+{89.77986362380813, 0.}
+
+skew
+{77.88710150512247, -5.984}
+
+Radius of the triangle:
+89.77986362380813/2/Sin(pi/3) = 51.83
+
+
+====
 10 triangular prisms
 First using straws
 triangle side length: let's use 90mm
