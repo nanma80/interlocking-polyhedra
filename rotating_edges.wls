@@ -6,8 +6,8 @@ displayLevel = 3;
 (* searchingForOptimalFactors = True; *)
 searchingForOptimalFactors = False;
 
-(* withRubberBands = False; *)
-withRubberBands = True;
+(* highlightingRod = False; *)
+highlightingRod = True;
 
 noSkew = False;
 (* noSkew = True; *)
@@ -169,7 +169,7 @@ getRotatedEdges[furtherRotationAngle_] := Module[
 exportPolyhedron[shape_] := Module[
 	{outputFileName, vertices, edges, faces, thickness, lighting, graph},
 
-	outputFileName = "rotating_edges_" <> shape <> ".png";
+	outputFileName = "rotating_edges_" <> shape <> If[highlightingRod, "_highlighting", ""] <> ".png";
 	outputPlotName = "rotating_edge_distances_" <> shape <> ".png";
 	imageFolder = "output";
 	outputFolder = FileNameJoin[{imageFolder, shape}];
@@ -260,8 +260,9 @@ exportPolyhedron[shape_] := Module[
 	
 	elements = {};
 
-	angle = 39.8037 / 180.0 * Pi;
-	(* angle = 50.111/180.0 * Pi; *)
+	(* angle = 39.8037 / 180.0 * Pi; *)
+	angle = 50.111/180.0 * Pi;
+	minDist = minRodDistance[angle];
 	rotatedRods = {};
 	For[rodId = 1, rodId <= Length[rods], rodId++,
 		rod = rods[[rodId]];
@@ -270,8 +271,27 @@ exportPolyhedron[shape_] := Module[
 		AppendTo[rotatedRods, rotatedRod];
 	];
 
+	highlightedRod = Select[rotatedRods, Norm[ Mean[#] - {0.1314327780297834, -0.4045084971874737, 0.6881909602355868}] < 0.001 &];
+	Print["Number of highlighted rod"];
+	Print[Length[highlightedRod]];
+	highlightedRod = highlightedRod[[1]];
+
+	contactingRods = Select[rotatedRods, Norm[ Mean[highlightedRod] - Mean[#] ] > 0.01 && distSegToSeg[highlightedRod, # ] < minDist + 0.001 & ];
+	Print["Number of contacting rod"];
+	Print[Length[contactingRods]];
+
+	otherRods = Select[rotatedRods, distSegToSeg[highlightedRod, # ] > minDist + 0.001 & ];
+	Print["Number of other rod"];
+	Print[Length[otherRods]];
+
   thickness = 0.16/2;
-	AppendTo[ elements, { FaceForm[Yellow], Map[Cylinder[#, thickness]&, rotatedRods] } ];
+  If[highlightingRod,
+  	AppendTo[ elements, { FaceForm[Red], Map[Cylinder[#, thickness]&, {highlightedRod} ] } ];
+  	AppendTo[ elements, { FaceForm[Green], Map[Cylinder[#, thickness]&, contactingRods] } ];
+  	AppendTo[ elements, { FaceForm[Yellow], Map[Cylinder[#, thickness]&, otherRods] } ];
+  	,
+		AppendTo[ elements, { FaceForm[Yellow], Map[Cylinder[#, thickness]&, rotatedRods] } ];
+  ];
 	
 	graph = Graphics3D[
 		elements,
