@@ -185,6 +185,8 @@ exportPolyhedron[shape_] := Module[
 	faceCoordinates = Map[#[[1]]&, faces];
 	faceCenters = Table[ Mean[faceCoordinates[[k]] ]//FullSimplify, {k, 1, Length[faceCoordinates]}];
 	edgeCenters = Map[Mean, edges];
+	(* Export[shape <> "_edge_coordinates.json", edges]; *)
+	(* Exit[]; *)
 
 	lengthFactor = 4;
 	rods = {};
