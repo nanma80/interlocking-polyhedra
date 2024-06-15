@@ -170,11 +170,13 @@ exportPolyhedron[shape_] := Module[
 	{outputFileName, vertices, edges, faces, thickness, lighting, graph},
 
 	outputFileName = "rotating_edges_" <> shape <> ".png";
+	outputPlotName = "rotating_edge_distances_" <> shape <> ".png";
 	imageFolder = "output";
 	outputFolder = FileNameJoin[{imageFolder, shape}];
 	If[!DirectoryQ[outputFolder], CreateDirectory[outputFolder]];
 
 	outputFileName = FileNameJoin[{outputFolder, outputFileName}];
+	outputPlotName = FileNameJoin[{outputFolder, outputPlotName}];
 	cropCommand = "mogrify -crop " <> IntegerString[imageSize[[2]]] <> "x" <> IntegerString[imageSize[[2]]] <> "+" <> IntegerString[(imageSize[[1]]-imageSize[[2]])/2] <> "+0 " <> outputFileName;
 
 	vertices = PolyhedronData[shape, "Vertices"];
@@ -184,34 +186,62 @@ exportPolyhedron[shape_] := Module[
 	faceCenters = Table[ Mean[faceCoordinates[[k]] ]//FullSimplify, {k, 1, Length[faceCoordinates]}];
 	edgeCenters = Map[Mean, edges];
 
-	lengthFactor = 6;
+	lengthFactor = 4;
+	rods = {};
+	For[edgeId = 1, edgeId <= Length[edges], edgeId ++,
+		edge = edges[[edgeId]];
+		edgeCenter = Mean[edge];
+		rod = Map[( (# - edgeCenter) * lengthFactor + edgeCenter) &, edge];
+		AppendTo[rods, rod];
+	];
 
-	For[rotationInDegree = 38, rotationInDegree <= 41, rotationInDegree+= 0.1,
-		(* rotationInDegree = 30; *)
+	rotatedRodDistance[angle_, rodId_] := Module[
+		{rod1, rotationMatrix1, rotatedRod1, rod, rotationMatrix, rotatedRod},
+		rod1 = rods[[1]];
+		rotationMatrix1 = RotationMatrix[angle, Mean[rod1]];
+		rotatedRod1 = rod1.rotationMatrix1;
+		rod = rods[[rodId]];
+		rotationMatrix = RotationMatrix[angle, Mean[rod]];
+		rotatedRod = rod.rotationMatrix;
+
+		distSegToSeg[rotatedRod1, rotatedRod ]
+	];
+
+	minRodDistance[angle_] := Min[Table[rotatedRodDistance[angle, k], {k, 2, 30}]];
+
+	For[rotationInDegree = 39.8037, rotationInDegree <= 39.8038, rotationInDegree+= 0.0001,
 		rotationAngle = rotationInDegree /180 * Pi;
 
-		rods = {};
 		rodDistances = {};
 
-		For[edgeId = 1, edgeId <= Length[edges], edgeId ++,
-			edge = edges[[edgeId]];
-			edgeCenter = Mean[edge];
-			rotationMatrix = RotationMatrix[rotationAngle, edgeCenter];
-			rod = Map[( (# - edgeCenter) * lengthFactor + edgeCenter).rotationMatrix &, edge];
-			AppendTo[rods, rod];
+		minDist = minRodDistance[rotationAngle];
+		rodDistances = Map[rotatedRodDistance[rotationAngle, #]&, Range[2, Length[rods]]];
+		tallyHead = Sort[Tally[ Round[rodDistances, epsilon] ] ][[ {1, 2, 3} ]];
+		gap = tallyHead[[2]][[1]] - tallyHead[[1]][[1]];
 
-			If[ edgeId > 1, 
-				rodDistance = distSegToSeg[rods[[1]], rod ];
-				AppendTo[rodDistances, rodDistance];
-			];
-		];
+		Print[{rotationInDegree, minDist, Length[ Select[rodDistances, # < minDist + 0.0003 &] ] , gap, tallyHead} ];
 
-		Print[{rotationInDegree , Sort[Tally[Round[rodDistances, epsilon]]]} ];
-		(* Print[Sort[rodDistances]]; *)
+
+(* 
+3 local maxima
+{39.80370000000002,  0.16760835756010592, 8, 2.3700000000015375*^-6, {{0.16760836, 4}, {0.16761073, 4}, {0.36309891, 2}}}
+{39.803800000000024, 0.1676075744460097,  8, 8.699999999861596*^-7, {{0.16760757, 4}, {0.16760844, 4}, {0.36309711, 2}}}
+
+{50.11190000000003, 0.16494575463958702, 8, 8.999999999981245*^-7, {{0.16494575, 4}, {0.16494665, 4}, {0.1661902, 2}}}
+{50.11200000000003, 0.1649465249998606, 8, 2.3899999999910104*^-6, {{0.16494652, 4}, {0.16494891, 4}, {0.1661882, 2}}}
+
+{50.17830000000004, 0.16486088964901724, 6, 1.7800000000067762*^-6, {{0.16486089, 4}, {0.16486267000000002, 2}, {0.16704261, 4}}}
+{50.178400000000046, 0.16486066543826744, 6, 8.999999998038355*^-8, {{0.16486067000000001, 2}, {0.16486076, 4}, {0.16704576000000002, 4}}}
+
+*)
 
 	];
 
-	Exit[];
+
+(* 	plot = Plot[ Table[ rotatedRodDistance[angle/180*Pi, k], {k, 2, 30}], {angle, 50, 50.3}, PlotRange -> {0, 0.2} ];
+	Export[outputPlotName, plot]; *)
+
+	(* Exit[]; *)
 
 	lighting = {{"Point", White, {50, -50, 50}}};
 	
@@ -219,8 +249,8 @@ exportPolyhedron[shape_] := Module[
 	If[shape == "Dodecahedron", viewPoint = {0, 0, 50}];
 	If[shape == "Icosahedron", viewPoint = {0, 0, 50}];
 	
-	viewPoint = {50, -30, 20};
-	(* viewPoint = {50, -50, 50}; *)
+	(* viewPoint = {0, -50, 0}; *)
+	viewPoint = {0.1314327780297834, -0.4045084971874737, 0.6881909602355868} * 100;
 	(* Map[Print[{#, vertices[[#]]//N}]&, Range[20]]; *)
 	(* Exit[]; *)
 	(* viewPoint = vertices[[5]] * 100; *)
@@ -230,8 +260,18 @@ exportPolyhedron[shape_] := Module[
 	
 	elements = {};
 
-  thickness = 0.01;
-	AppendTo[ elements, { FaceForm[Yellow], Map[Cylinder[#, thickness]&, rods] } ];
+	angle = 39.8037 / 180.0 * Pi;
+	(* angle = 50.111/180.0 * Pi; *)
+	rotatedRods = {};
+	For[rodId = 1, rodId <= Length[rods], rodId++,
+		rod = rods[[rodId]];
+		rotationMatrix = RotationMatrix[angle, Mean[rod]];
+		rotatedRod = rod.rotationMatrix;
+		AppendTo[rotatedRods, rotatedRod];
+	];
+
+  thickness = 0.16/2;
+	AppendTo[ elements, { FaceForm[Yellow], Map[Cylinder[#, thickness]&, rotatedRods] } ];
 	
 	graph = Graphics3D[
 		elements,
