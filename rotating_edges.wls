@@ -185,6 +185,7 @@ exportPolyhedron[shape_] := Module[
 	faceCoordinates = Map[#[[1]]&, faces];
 	faceCenters = Table[ Mean[faceCoordinates[[k]] ]//FullSimplify, {k, 1, Length[faceCoordinates]}];
 	edgeCenters = Map[Mean, edges];
+	(* Map[Print, edgeCenters]; *)
 	(* Export[shape <> "_edge_coordinates.json", edges]; *)
 	(* Exit[]; *)
 
@@ -209,9 +210,9 @@ exportPolyhedron[shape_] := Module[
 		distSegToSeg[rotatedRod1, rotatedRod ]
 	];
 
-	minRodDistance[angle_] := Min[Table[rotatedRodDistance[angle, k], {k, 2, 30}]];
+	minRodDistance[angle_] := Min[Table[rotatedRodDistance[angle, k], {k, 2, Length[rods]}]];
 
-	For[rotationInDegree = 39.8037, rotationInDegree <= 39.8038, rotationInDegree+= 0.0001,
+	For[rotationInDegree = 61.83, rotationInDegree <= 61.85, rotationInDegree+= .01,
 		rotationAngle = rotationInDegree /180 * Pi;
 
 		rodDistances = {};
@@ -221,10 +222,12 @@ exportPolyhedron[shape_] := Module[
 		tallyHead = Sort[Tally[ Round[rodDistances, epsilon] ] ][[ {1, 2, 3} ]];
 		gap = tallyHead[[2]][[1]] - tallyHead[[1]][[1]];
 
-		Print[{rotationInDegree, minDist, Length[ Select[rodDistances, # < minDist + 0.0003 &] ] , gap, tallyHead} ];
+		Print[{rotationInDegree, minDist, Length[ Select[rodDistances, # < minDist + 0.001 &] ] , gap, tallyHead} ];
 
 
 (* 
+icosahedron:
+
 3 local maxima
 {39.80370000000002,  0.16760835756010592, 8, 2.3700000000015375*^-6, {{0.16760836, 4}, {0.16761073, 4}, {0.36309891, 2}}}
 {39.803800000000024, 0.1676075744460097,  8, 8.699999999861596*^-7, {{0.16760757, 4}, {0.16760844, 4}, {0.36309711, 2}}}
@@ -235,15 +238,28 @@ exportPolyhedron[shape_] := Module[
 {50.17830000000004, 0.16486088964901724, 6, 1.7800000000067762*^-6, {{0.16486089, 4}, {0.16486267000000002, 2}, {0.16704261, 4}}}
 {50.178400000000046, 0.16486066543826744, 6, 8.999999998038355*^-8, {{0.16486067000000001, 2}, {0.16486076, 4}, {0.16704576000000002, 4}}}
 
+octahedron
+max distance:
+42.941
+{42.940999999999974, 0.2588190450786432, 4, 0.07492037000000001, {{0.25881905, 4}, {0.33373942, 2}, {0.56301334, 2}}}
+
+max contact:
+45.883
+{45.88299999999997, 0.25755578025935383, 6, 2.3599999999790455*^-6, {{0.25755578, 4}, {0.25755814, 2}, {0.58319127, 2}}}
+
+61.836
+{61.835999999999984, 0.2093514644443703, 6, 7.73999999997832*^-6, {{0.20935146000000002, 2}, {0.2093592, 4}, {0.6613041000000001, 2}}}
 *)
 
 	];
 
+	(* global plot *)
+	(* plot = Plot[ Table[ rotatedRodDistance[angle/180*Pi, k], {k, 2, Length[rods]}], {angle, 0, 180}]; *)
+	(* zoomed in *)
+	plot = Plot[ Table[ rotatedRodDistance[angle/180*Pi, k], {k, 2, Length[rods]}], {angle, 50.05, 50.25}, PlotRange -> {0.162, 0.168}];
+	Export[outputPlotName, plot];
 
-(* 	plot = Plot[ Table[ rotatedRodDistance[angle/180*Pi, k], {k, 2, 30}], {angle, 50, 50.3}, PlotRange -> {0, 0.2} ];
-	Export[outputPlotName, plot]; *)
-
-	(* Exit[]; *)
+	Exit[];
 
 	lighting = {{"Point", White, {50, -50, 50}}};
 	
@@ -252,18 +268,30 @@ exportPolyhedron[shape_] := Module[
 	If[shape == "Icosahedron", viewPoint = {0, 0, 50}];
 	
 	(* viewPoint = {0, -50, 0}; *)
-	viewPoint = {0.1314327780297834, -0.4045084971874737, 0.6881909602355868} * 100;
+
+	(* icosahedron edge first *)
+	(* viewPoint = {0.1314327780297834, -0.4045084971874737, 0.6881909602355868} * 100; *)
+
+	(* octahedron edge first *)
+	viewPoint = {1, 0, 1} * 100;
+
 	(* Map[Print[{#, vertices[[#]]//N}]&, Range[20]]; *)
 	(* Exit[]; *)
 	(* viewPoint = vertices[[5]] * 100; *)
 	(* viewPoint = {50, -50, 50}; *)
 
-	viewCenter = {0, 0, 0};
+	(* viewCenter = {0, 0, 0}; *)
 	
 	elements = {};
 
 	(* angle = 39.8037 / 180.0 * Pi; *)
-	angle = 50.111/180.0 * Pi;
+	(* angle = 50.111/180.0 * Pi; *)
+
+	(* octahedron, max distance 42.941; max contact (6) 45.883 *)
+	(* angle = 42.941/180.0 * Pi; *)
+	(* angle = 45.883/180.0 * Pi; *)
+	angle = 61.836/180.0 * Pi;
+
 	minDist = minRodDistance[angle];
 	rotatedRods = {};
 	For[rodId = 1, rodId <= Length[rods], rodId++,
@@ -273,7 +301,12 @@ exportPolyhedron[shape_] := Module[
 		AppendTo[rotatedRods, rotatedRod];
 	];
 
+	(* icosahedron *)
 	highlightedRod = Select[rotatedRods, Norm[ Mean[#] - {0.1314327780297834, -0.4045084971874737, 0.6881909602355868}] < 0.001 &];
+
+	(* octahedron *)
+	(* highlightedRod = Select[rotatedRods, Norm[ Mean[#] - {0.35355339059327373, 0., 0.35355339059327373}] < 0.001 &]; *)
+
 	Print["Number of highlighted rod"];
 	Print[Length[highlightedRod]];
 	highlightedRod = highlightedRod[[1]];
@@ -286,7 +319,11 @@ exportPolyhedron[shape_] := Module[
 	Print["Number of other rod"];
 	Print[Length[otherRods]];
 
+	(* icosahedron *)
   thickness = 0.16/2;
+
+  (* octahedron *)
+  (* thickness = 0.209/2; *)
   If[highlightingRod,
   	AppendTo[ elements, { FaceForm[Red], Map[Cylinder[#, thickness]&, {highlightedRod} ] } ];
   	AppendTo[ elements, { FaceForm[Green], Map[Cylinder[#, thickness]&, contactingRods] } ];
