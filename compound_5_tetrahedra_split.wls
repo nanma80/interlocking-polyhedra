@@ -229,7 +229,7 @@ exportPolyhedron[shape_] := Module[
 			, PlotPoints -> 30
 			, MaxRecursion -> 2
 			, Mesh -> Full
-			, Contours -> {{minDistance * 0.5, Dashed}, { minDistance * 0.95, Thick }, {minDistance * 1.5, Dashed}}
+			, Contours -> {{minDistance * 0.02, Dashed}, {minDistance * 0.5, Dashed}, { minDistance * 0.95, Thick }, {minDistance * 1.5, Dashed}}
 		];
 
 		Export[outputFileName, graph],
